@@ -6,6 +6,7 @@ import { Dog, LogOut } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { AdminTopNav } from "@/components/layout/admin-top-nav";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -30,6 +31,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               Admin
             </span>
           </Link>
+          <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <AdminTopNav />
         </div>
 
         <div className="flex items-center gap-1 sm:gap-1.5">
