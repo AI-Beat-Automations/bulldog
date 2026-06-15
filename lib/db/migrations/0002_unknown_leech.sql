@@ -1,0 +1,2 @@
+CREATE TYPE "public"."chat_conversation_source" AS ENUM('widget', 'playground');--> statement-breakpoint
+ALTER TABLE "chat_conversations" ADD COLUMN "source" "chat_conversation_source" DEFAULT 'widget' NOT NULL;

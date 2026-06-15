@@ -14,10 +14,19 @@ export const chatMessageRoleEnum = pgEnum("chat_message_role", [
   "assistant",
 ]);
 
+// Origen de la conversación: tráfico real del widget vs prueba interna del
+// Playground. Default 'widget' → migración no destructiva (filas viejas = widget).
+// Ver docs/adr/0002-playground-source-discriminator.md.
+export const chatConversationSourceEnum = pgEnum("chat_conversation_source", [
+  "widget",
+  "playground",
+]);
+
 export const chatConversations = pgTable("chat_conversations", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
+  source: chatConversationSourceEnum("source").notNull().default("widget"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
