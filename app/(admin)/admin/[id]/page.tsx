@@ -45,9 +45,16 @@ export default async function AdminThreadPage({
           </span>
         }
         actions={
-          <Badge variant="muted" className="px-2.5 py-1 text-sm">
-            {messages.length} {messages.length === 1 ? "mensaje" : "mensajes"}
-          </Badge>
+          <>
+            {conversation.source === "playground" ? (
+              <Badge variant="default" className="px-2.5 py-1 text-sm">
+                Playground
+              </Badge>
+            ) : null}
+            <Badge variant="muted" className="px-2.5 py-1 text-sm">
+              {messages.length} {messages.length === 1 ? "mensaje" : "mensajes"}
+            </Badge>
+          </>
         }
       />
       <PageBody>

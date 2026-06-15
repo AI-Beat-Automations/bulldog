@@ -31,19 +31,43 @@ function shortId(id: string) {
   return `${id.slice(0, 8)}…${id.slice(-4)}`;
 }
 
-export default async function AdminConversationsPage() {
+const filters = [
+  { key: "all", label: "Todas", href: "/admin" },
+  { key: "widget", label: "Clientes", href: "/admin?source=widget" },
+  { key: "playground", label: "Playground", href: "/admin?source=playground" },
+] as const;
+
+const filterLinkClass =
+  "rounded-md px-2.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground";
+
+export default async function AdminConversationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ source?: string }>;
+}) {
   const session = await auth();
   if (!session) redirect("/login");
+
+  const { source } = await searchParams;
+  const activeFilter =
+    source === "widget" || source === "playground" ? source : "all";
 
   const rows = await db
     .select({
       id: chatConversations.id,
+      source: chatConversations.source,
       createdAt: chatConversations.createdAt,
       messageCount: sql<number>`count(${chatMessages.id})::int`,
       lastAt: sql<Date>`max(${chatMessages.createdAt})`,
     })
     .from(chatConversations)
     .leftJoin(chatMessages, eq(chatMessages.conversationId, chatConversations.id))
+    // where(undefined) es no-op en drizzle → "Todas" sin filtro.
+    .where(
+      activeFilter === "all"
+        ? undefined
+        : eq(chatConversations.source, activeFilter)
+    )
     .groupBy(chatConversations.id)
     .orderBy(desc(sql`max(${chatMessages.createdAt})`))
     .limit(100);
@@ -52,7 +76,7 @@ export default async function AdminConversationsPage() {
     <>
       <PageHeader
         title="Conversaciones"
-        subtitle="Todas las conversaciones del widget de chat."
+        subtitle="Conversaciones del widget (clientes reales) y pruebas del Playground."
         actions={
           rows.length > 0 ? (
             <Badge variant="muted" className="px-2.5 py-1 text-sm">
@@ -62,15 +86,33 @@ export default async function AdminConversationsPage() {
         }
       />
       <PageBody>
+        <nav className="mb-4 flex items-center gap-0.5">
+          {filters.map((f) => (
+            <Link
+              key={f.key}
+              href={f.href}
+              data-active={activeFilter === f.key}
+              className={filterLinkClass}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </nav>
         {rows.length === 0 ? (
           <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <Inbox className="size-6" />
             </span>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">Sin conversaciones todavía</p>
+              <p className="text-sm font-medium text-foreground">
+                {activeFilter === "all"
+                  ? "Sin conversaciones todavía"
+                  : "Sin conversaciones para este filtro"}
+              </p>
               <p className="text-sm text-muted-foreground">
-                Cuando alguien escriba en el widget, aparecerá aquí.
+                {activeFilter === "playground"
+                  ? "Probá el asistente en el Playground y aparecerá aquí."
+                  : "Cuando alguien escriba en el widget, aparecerá aquí."}
               </p>
             </div>
           </Card>
@@ -80,6 +122,7 @@ export default async function AdminConversationsPage() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="px-4">Conversación</TableHead>
+                  <TableHead className="px-4">Origen</TableHead>
                   <TableHead className="px-4">Mensajes</TableHead>
                   <TableHead className="px-4">Última actividad</TableHead>
                   <TableHead className="w-10 px-4" aria-label="Abrir" />
@@ -100,6 +143,13 @@ export default async function AdminConversationsPage() {
                         </span>
                         <span className="font-mono text-[13px] text-foreground">{shortId(c.id)}</span>
                       </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {c.source === "playground" ? (
+                        <Badge variant="default">Playground</Badge>
+                      ) : (
+                        <Badge variant="muted">Cliente</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <Badge variant="secondary">{c.messageCount}</Badge>

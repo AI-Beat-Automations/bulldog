@@ -6,6 +6,7 @@ import {
   loadHistory,
   resolveConversation,
   saveMessage,
+  type ConversationSource,
 } from "@/lib/chat/persistence";
 import { getActiveSystemPrompt } from "@/lib/prompt/repository";
 import { corsHeaders, isAllowedOrigin } from "@/lib/cors";
@@ -82,6 +83,21 @@ export async function POST(request: Request) {
     );
   }
 
+  // Origen de la conversación. NOTA: lo provee el cliente (falsificable); se usa
+  // solo al CREAR una conversación nueva. Ver ADR-0002 (riesgo aceptado v1).
+  const rawSource = obj.source;
+  if (
+    rawSource !== undefined &&
+    rawSource !== "widget" &&
+    rawSource !== "playground"
+  ) {
+    return Response.json(
+      { error: "source must be 'widget' or 'playground'" },
+      { status: 400, headers }
+    );
+  }
+  const source = rawSource as ConversationSource | undefined;
+
   const userText = extractUserText(obj);
   if (typeof userText !== "string" || userText.trim().length === 0) {
     return Response.json(
@@ -94,7 +110,7 @@ export async function POST(request: Request) {
   // 4) Resolver conversación (id desconocido → 404, nunca upsert).
   let id: string;
   try {
-    id = (await resolveConversation(conversationId)).id;
+    id = (await resolveConversation(conversationId, source)).id;
   } catch (error) {
     if (error instanceof ConversationNotFoundError) {
       return Response.json(
