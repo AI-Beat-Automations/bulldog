@@ -1,12 +1,13 @@
 import { streamText } from "ai";
 
-import { assertAiConfigured, chatModel, SYSTEM_PROMPT } from "@/lib/ai";
+import { assertAiConfigured, chatModel } from "@/lib/ai";
 import {
   ConversationNotFoundError,
   loadHistory,
   resolveConversation,
   saveMessage,
 } from "@/lib/chat/persistence";
+import { getActiveSystemPrompt } from "@/lib/prompt/repository";
 import { corsHeaders, isAllowedOrigin } from "@/lib/cors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -110,9 +111,13 @@ export async function POST(request: Request) {
   await saveMessage({ conversationId: id, role: "user", content });
   const history = await loadHistory(id);
 
+  // Lee la versión activa en cada request (sin cache): los cambios de prompt
+  // desde el admin aplican al instante.
+  const systemPrompt = await getActiveSystemPrompt();
+
   const result = streamText({
     model: chatModel,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages: history.map((m) => ({ role: m.role, content: m.content })),
     abortSignal: request.signal,
     onFinish: async ({ text }) => {

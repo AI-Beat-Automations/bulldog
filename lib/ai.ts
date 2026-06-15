@@ -13,9 +13,11 @@ export const chatModel = openrouter(
   process.env.OPENROUTER_MODEL || DEFAULT_MODEL
 );
 
-// System prompt configurable sin redeploy de código. Default genérico.
-export const SYSTEM_PROMPT =
-  process.env.CHAT_SYSTEM_PROMPT ??
+// Fuente de verdad del system prompt: la tabla `prompt_versions` (ver
+// lib/prompt/repository.ts). Esta constante es solo el fallback cuando no hay
+// ninguna versión activa. La env CHAT_SYSTEM_PROMPT quedó jubilada — ver
+// docs/adr/0001-system-prompt-versionado-en-db.md.
+export const DEFAULT_SYSTEM_PROMPT =
   "Eres un asistente de IA útil, claro y conciso. Responde en el mismo idioma del usuario.";
 
 export function assertAiConfigured(): void {

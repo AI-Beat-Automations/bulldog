@@ -1,5 +1,13 @@
-import { pgTable, text, timestamp, pgEnum, index } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  text,
+  timestamp,
+  pgEnum,
+  index,
+  boolean,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 
 export const chatMessageRoleEnum = pgEnum("chat_message_role", [
   "user",
@@ -31,6 +39,29 @@ export const chatMessages = pgTable(
       table.conversationId,
       table.createdAt
     ),
+  ]
+);
+
+// System prompt versionado. Append-only: cada guardado inserta una versión y
+// nunca se borra ninguna. Exactamente una está activa (la que recibe el modelo).
+// Ver docs/adr/0001-system-prompt-versionado-en-db.md.
+export const promptVersions = pgTable(
+  "prompt_versions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    body: text("body").notNull(),
+    isActive: boolean("is_active").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // Invariante: a lo sumo una versión activa (índice único parcial).
+    uniqueIndex("prompt_versions_active_unique")
+      .on(table.isActive)
+      .where(sql`is_active`),
+    // Listado del historial por fecha (más reciente primero).
+    index("prompt_versions_created_idx").on(table.createdAt),
   ]
 );
 
