@@ -7,6 +7,8 @@ import { MessageCircle, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+export type ConversationSource = "widget" | "playground";
+
 export type ConversationTailLine = {
   role: "user" | "assistant";
   text: string;
@@ -14,6 +16,7 @@ export type ConversationTailLine = {
 
 export type ConversationRow = {
   id: string;
+  source: ConversationSource;
   href: string;
   timeLabel: string;
   /** Hasta 2 mensajes en orden cronológico: [penúltimo, último]. */
@@ -22,8 +25,31 @@ export type ConversationRow = {
   search: string;
 };
 
+type FilterKey = "all" | "widget" | "playground";
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "Todas" },
+  { key: "widget", label: "Clientes" },
+  { key: "playground", label: "Playground" },
+];
+
 function rolePrefix(role: "user" | "assistant") {
   return role === "user" ? "Cliente: " : "Asistente: ";
+}
+
+function SourceChip({ source }: { source: ConversationSource }) {
+  const isPlayground = source === "playground";
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          isPlayground ? "bg-muted-foreground/60" : "bg-emerald-500"
+        )}
+      />
+      {isPlayground ? "Playground" : "Cliente"}
+    </span>
+  );
 }
 
 function Row({ row, active }: { row: ConversationRow; active: boolean }) {
@@ -33,7 +59,7 @@ function Row({ row, active }: { row: ConversationRow; active: boolean }) {
 
   // top = penúltimo (gris) cuando hay 2; si sólo hay 1, el único va arriba marcado.
   const top = penultimate ?? last;
-  const topMarked = penultimate === null; // sólo 1 mensaje → marcado arriba
+  const topMarked = penultimate === null && top !== null;
   const bottom = penultimate ? last : null; // último (marcado) cuando hay 2
 
   return (
@@ -70,14 +96,56 @@ function Row({ row, active }: { row: ConversationRow; active: boolean }) {
             {row.timeLabel}
           </span>
         </span>
-        {bottom ? (
-          <span className="mt-[3px] block min-w-0 truncate text-[13px] font-medium text-foreground">
-            <span className="font-semibold">{rolePrefix(bottom.role)}</span>
-            {bottom.text}
+        <span className="mt-[3px] flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+            {bottom ? (
+              <>
+                <span className="font-semibold">{rolePrefix(bottom.role)}</span>
+                {bottom.text}
+              </>
+            ) : null}
           </span>
-        ) : null}
+          <SourceChip source={row.source} />
+        </span>
       </span>
     </Link>
+  );
+}
+
+function FilterButton({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-[5px] text-[12.5px] font-medium transition-colors",
+        active
+          ? "bg-card text-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground"
+      )}
+    >
+      {label}
+      <span
+        className={cn(
+          "rounded-[5px] px-[5px] text-[10.5px] font-semibold tabular-nums",
+          active
+            ? "bg-secondary text-secondary-foreground"
+            : "bg-border text-muted-foreground"
+        )}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
 
@@ -90,12 +158,25 @@ export function ConversationList({
 }) {
   const pathname = usePathname();
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<FilterKey>("all");
+
+  const counts = useMemo(
+    () => ({
+      all: rows.length,
+      widget: rows.filter((r) => r.source === "widget").length,
+      playground: rows.filter((r) => r.source === "playground").length,
+    }),
+    [rows]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.search.includes(q));
-  }, [rows, query]);
+    return rows.filter((r) => {
+      if (filter !== "all" && r.source !== filter) return false;
+      if (q && !r.search.includes(q)) return false;
+      return true;
+    });
+  }, [rows, query, filter]);
 
   return (
     <>
@@ -117,6 +198,17 @@ export function ConversationList({
             aria-label="Buscar conversaciones"
             className="min-w-0 flex-1 border-none bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
           />
+        </div>
+        <div className="mt-2.5 flex gap-0.5 rounded-lg bg-secondary p-[3px]">
+          {FILTERS.map((f) => (
+            <FilterButton
+              key={f.key}
+              label={f.label}
+              count={counts[f.key]}
+              active={filter === f.key}
+              onClick={() => setFilter(f.key)}
+            />
+          ))}
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">

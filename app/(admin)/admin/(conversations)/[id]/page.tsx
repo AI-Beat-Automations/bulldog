@@ -31,9 +31,22 @@ export default async function AdminThreadPage({
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex shrink-0 items-center justify-between gap-3.5 border-b border-border px-6 py-3.5">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold -tracking-[0.01em] text-foreground">
-            Conversación
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-[15px] font-semibold -tracking-[0.01em] text-foreground">
+              Conversación
+            </h2>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  conversation.source === "playground"
+                    ? "bg-muted-foreground/60"
+                    : "bg-emerald-500"
+                )}
+              />
+              {conversation.source === "playground" ? "Playground" : "Cliente"}
+            </span>
+          </div>
           <div className="mt-0.5 truncate font-mono text-[11.5px] text-muted-foreground/80">
             {id} · creada {dateFormatter.format(new Date(conversation.createdAt))}
           </div>

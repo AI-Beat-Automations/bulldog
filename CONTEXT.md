@@ -18,6 +18,14 @@ _Avoid_: "el prompt" (a secas, cuando importa distinguir versión vs activa)
 La única Prompt Version marcada como vigente (`is_active`); es la que el chat le pasa al modelo en cada request.
 _Avoid_: "el prompt actual" (ambiguo con "la última editada")
 
+**Playground**:
+Superficie interna del panel donde el **Admin** se hace pasar por un visitante y chatea con el **Asistente** para validar su comportamiento antes/después de cambios de prompt. Reintroduce el "Chat Playground" de Eva (el PRD lo había declarado desaparecido). Tercer ítem del nav: Conversaciones · Playground · Configuración.
+_Avoid_: "chatear con la gente" (no hay personas reales; es simulación), "bandeja"/"chat en vivo" (no es handoff humano).
+
+**Source** (origen de la Conversation):
+De dónde nació un hilo: `widget` (cliente final real, vía bubble embebido) o `playground` (prueba interna del Admin). Las pruebas del Playground SÍ se persisten en el historial, pero marcadas para poder distinguirlas y filtrarlas; el listado de Conversaciones deja de ser "solo widget".
+_Avoid_: "canal" (no hay multi-canal: WhatsApp, etc.), "tenant".
+
 ## Relationships
 
 - El **System Prompt** gobierna al **Asistente** con el que conversa el público anónimo.
@@ -36,3 +44,6 @@ _Avoid_: "el prompt actual" (ambiguo con "la última editada")
 - "el prompt que se le pasa a la gente" se aclaró: NO es un texto visible al usuario, sino el **System Prompt** (instrucciones internas del modelo). Resuelto.
 - "no lo podemos borrar, solo actualizar" se aclaró: NO es sobrescritura en sitio, sino historial append-only de **Prompt Versions** con una **Active Version**; nunca se borra ninguna. Resuelto.
 - `CHAT_SYSTEM_PROMPT` (env) deja de ser fuente de verdad: la fuente es la **Active Version** en DB; el único fallback es el DEFAULT hardcodeado. Resuelto.
+- **Reversión de decisiones del PRD**: el PRD §14 declaraba que "el playground desaparece" y que el **Admin** "solo lee". Decisión nueva (2026-06-15): se **reintroduce el Playground** y el Admin **escribe** mensajes `user` dentro de él. El invariante "Admin read-only" queda acotado al listado de Conversaciones, no al Playground. Resuelto.
+- "se van a guardar en el historial" se acotó: las conversaciones de **Playground** se persisten en las mismas tablas pero con **Source** `playground`; no se mezclan sin marca con las del **widget**. Resuelto.
+- **Riesgo aceptado (v1)**: la marca **Source** la manda el cliente en el body de `/api/chat` (no la deriva el servidor de la sesión). Es **falsificable** desde afuera → degrada la confiabilidad del listado, no es un fallo de seguridad. Upgrade conocido: derivar `source` de `auth()` en el handler. Aceptado por simplicidad.

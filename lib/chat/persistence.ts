@@ -12,22 +12,27 @@ export class ConversationNotFoundError extends Error {
 
 export type ChatRole = "user" | "assistant";
 
+export type ConversationSource = "widget" | "playground";
+
 export interface HistoryMessage {
   role: ChatRole;
   content: string;
 }
 
-export async function createConversation(): Promise<{
-  id: string;
-  createdAt: Date;
-}> {
-  const [row] = await db.insert(chatConversations).values({}).returning();
+export async function createConversation(
+  source?: ConversationSource
+): Promise<{ id: string; createdAt: Date; source: ConversationSource }> {
+  const [row] = await db
+    .insert(chatConversations)
+    // Omitir source cuando no se pasa → la DB aplica el default 'widget'.
+    .values(source ? { source } : {})
+    .returning();
   return row;
 }
 
 export async function getConversation(
   id: string
-): Promise<{ id: string; createdAt: Date } | null> {
+): Promise<{ id: string; createdAt: Date; source: ConversationSource } | null> {
   const [row] = await db
     .select()
     .from(chatConversations)
@@ -38,6 +43,7 @@ export async function getConversation(
 
 export interface ConversationListItem {
   id: string;
+  source: ConversationSource;
   createdAt: Date;
   messageCount: number;
   lastAt: Date | null;
@@ -57,6 +63,7 @@ export async function listConversationsWithTail(
   const base = await db
     .select({
       id: chatConversations.id,
+      source: chatConversations.source,
       createdAt: chatConversations.createdAt,
       messageCount: sql<number>`count(${chatMessages.id})::int`,
       lastAt: sql<Date | null>`max(${chatMessages.createdAt})`,
@@ -104,6 +111,7 @@ export async function listConversationsWithTail(
 
   return base.map((c) => ({
     id: c.id,
+    source: c.source,
     createdAt: c.createdAt,
     messageCount: c.messageCount,
     lastAt: c.lastAt,
@@ -135,10 +143,12 @@ export async function saveMessage(input: {
 }
 
 export async function resolveConversation(
-  id?: string | null
+  id?: string | null,
+  source?: ConversationSource
 ): Promise<{ id: string }> {
   if (id === undefined || id === null) {
-    const conv = await createConversation();
+    // El source solo aplica al crear; un id existente ya tiene el suyo.
+    const conv = await createConversation(source);
     return { id: conv.id };
   }
   const existing = await getConversation(id);

@@ -50,6 +50,7 @@ export default async function ConversationsLayout({
     const tail = c.tail.map((m) => ({ role: m.role, text: oneLine(m.content) }));
     return {
       id: c.id,
+      source: c.source,
       href: `/admin/${c.id}`,
       timeLabel: timeLabel(c.lastAt),
       tail,
