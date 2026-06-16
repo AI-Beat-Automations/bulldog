@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { activateVersion, saveNewActiveVersion } from "@/lib/prompt/repository";
 
-const PROMPT_PATH = "/admin/config/prompt";
+const CONFIG_PATH = "/admin/config";
 
 // Los server actions son endpoints POST invocables por sí solos: cada uno
 // re-verifica la sesión, no basta el guard de la página/layout.
@@ -17,12 +17,12 @@ export async function savePrompt(formData: FormData) {
 
   const body = (formData.get("body") ?? "").toString();
   if (body.trim().length === 0) {
-    redirect(`${PROMPT_PATH}?status=empty`);
+    redirect(`${CONFIG_PATH}?status=empty`);
   }
 
   const { created } = await saveNewActiveVersion(body);
-  revalidatePath(PROMPT_PATH);
-  redirect(`${PROMPT_PATH}?status=${created ? "saved" : "nochange"}`);
+  revalidatePath(CONFIG_PATH);
+  redirect(`${CONFIG_PATH}?status=${created ? "saved" : "nochange"}`);
 }
 
 export async function activatePrompt(formData: FormData) {
@@ -32,7 +32,7 @@ export async function activatePrompt(formData: FormData) {
   const id = (formData.get("id") ?? "").toString();
   if (id.length > 0) {
     await activateVersion(id);
-    revalidatePath(PROMPT_PATH);
+    revalidatePath(CONFIG_PATH);
   }
-  redirect(`${PROMPT_PATH}?status=activated`);
+  redirect(`${CONFIG_PATH}?status=activated`);
 }

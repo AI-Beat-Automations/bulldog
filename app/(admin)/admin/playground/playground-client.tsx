@@ -3,17 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { Plus } from "lucide-react";
+import { Bot, Plus, Send } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { loadPlaygroundThread } from "./actions";
 
 // Clave SEPARADA de la del widget ("bulldog-conversation-id") para que, sirviendo
 // ambos desde el mismo origen, una prueba no pise una conversación del widget.
 const STORAGE_KEY = "bulldog-playground-conversation-id";
+
+const SUGGESTIONS = [
+  "¿Cuánto cuesta el plan?",
+  "¿Dan servicio en mi zona?",
+  "Quiero cancelar",
+];
 
 function createPlaygroundTransport(onConversationId: (id: string | null) => void) {
   const idHolder = {
@@ -66,12 +71,14 @@ function messageText(message: UIMessage): string {
     .join("");
 }
 
-function shortId(id: string) {
-  return `${id.slice(0, 8)}…${id.slice(-4)}`;
-}
-
-export function PlaygroundClient() {
-  const [conversationId, setConversationId] = useState<string | null>(null);
+export function PlaygroundClient({
+  promptPreview,
+  versionLabel,
+}: {
+  promptPreview: string;
+  versionLabel: string;
+}) {
+  const [, setConversationId] = useState<string | null>(null);
 
   // Transport creado una sola vez (useState lazy init); resume por localStorage
   // con clave propia. Evita leer refs durante el render.
@@ -122,10 +129,10 @@ export function PlaygroundClient() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, status]);
 
-  function handleSend() {
-    const text = input.trim();
-    if (text.length === 0 || isStreaming) return;
-    void sendMessage({ text });
+  function send(text: string) {
+    const t = text.trim();
+    if (t.length === 0 || isStreaming) return;
+    void sendMessage({ text: t });
     setInput("");
   }
 
@@ -140,85 +147,130 @@ export function PlaygroundClient() {
   }
 
   return (
-    <Card className="flex h-[calc(100dvh-15rem)] min-h-[440px] flex-col overflow-hidden p-0">
-      {/* Toolbar */}
-      <header className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Badge variant="default">Playground</Badge>
-          {conversationId ? (
-            <span className="truncate font-mono text-xs text-muted-foreground">
-              {shortId(conversationId)}
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground">
-              Nueva conversación
-            </span>
-          )}
+    <div className="flex min-h-0 flex-1">
+      <aside className="flex w-[300px] shrink-0 flex-col gap-5 overflow-auto border-r border-border bg-muted px-5 py-[22px]">
+        <div>
+          <h1 className="text-[17px] font-semibold -tracking-[0.01em] text-foreground">
+            Playground
+          </h1>
+          <p className="mt-1.5 text-[13px] leading-[1.55] text-muted-foreground">
+            Hazte pasar por un visitante y prueba al asistente antes de publicar
+            cambios de prompt.
+          </p>
         </div>
+
+        <div className="rounded-[11px] border border-border bg-card p-3.5 shadow-xs">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+            Prompt activo
+          </div>
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-[3px] text-xs text-secondary-foreground">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              {versionLabel}
+            </span>
+          </div>
+          <p className="text-[12.5px] leading-[1.6] text-muted-foreground">
+            {promptPreview}
+          </p>
+        </div>
+
         <Button
           type="button"
           variant="outline"
-          size="sm"
           onClick={handleNewConversation}
-          className="gap-1.5"
+          className="justify-center gap-1.5"
         >
-          <Plus className="size-4" />
+          <Plus className="size-[15px]" />
           Nueva conversación
         </Button>
-      </header>
+      </aside>
 
-      {/* Lista de mensajes */}
-      <div ref={listRef} className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
-        {messages.length === 0 ? (
-          <p className="m-auto max-w-sm text-center text-sm text-muted-foreground">
-            Escribí un mensaje para probar al asistente, igual que lo haría un
-            visitante del widget.
-          </p>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={
-                message.role === "user"
-                  ? "max-w-[80%] self-end whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground"
-                  : "max-w-[80%] self-start whitespace-pre-wrap rounded-2xl rounded-tl-sm border border-border bg-muted px-4 py-2.5 text-sm text-foreground"
-              }
-            >
-              {messageText(message)}
-            </div>
-          ))
-        )}
-        {error ? (
-          <p className="self-start text-xs text-destructive">
-            Ocurrió un error. Intentá de nuevo.
-          </p>
-        ) : null}
-      </div>
-
-      {/* Composer */}
-      <div className="flex shrink-0 items-end gap-2 border-t p-3">
-        <Textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          placeholder="Escribí un mensaje…"
-          rows={1}
-          className="max-h-32 min-h-9 flex-1 resize-none"
-        />
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleSend}
-          disabled={isStreaming || input.trim().length === 0}
+      <div className="flex min-h-0 flex-1 flex-col bg-background">
+        <div
+          ref={listRef}
+          className="min-h-0 flex-1 overflow-auto bg-muted px-6 py-7"
         >
-          Enviar
-        </Button>
+          <div className="mx-auto flex max-w-[720px] flex-col gap-4">
+            {messages.length === 0 ? (
+              <div className="mx-auto mt-10 flex max-w-[420px] flex-col items-center gap-4 text-center">
+                <span className="flex size-12 items-center justify-center rounded-[13px] bg-primary text-primary-foreground">
+                  <Bot className="size-[22px]" />
+                </span>
+                <p className="text-sm leading-[1.6] text-secondary-foreground">
+                  Escribe un mensaje para empezar a probar al asistente.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => send(s)}
+                      className="rounded-full border border-border bg-card px-3 py-1.5 text-[12.5px] text-secondary-foreground transition-colors hover:bg-secondary"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "max-w-[80%] whitespace-pre-wrap break-words rounded-[15px] px-3.5 py-2.5 text-sm leading-[1.55] [animation:bdfade_.25s_ease_both]",
+                    message.role === "user"
+                      ? "self-end rounded-tr-[5px] bg-primary text-primary-foreground"
+                      : "self-start rounded-tl-[5px] border border-border bg-card text-foreground shadow-xs"
+                  )}
+                >
+                  {messageText(message)}
+                </div>
+              ))
+            )}
+
+            {status === "submitted" ? (
+              <div className="flex gap-1.5 self-start rounded-[15px] rounded-tl-[5px] border border-border bg-card px-4 py-3.5 shadow-xs">
+                <span className="size-[7px] rounded-full bg-muted-foreground [animation:bdblink_1.2s_infinite]" />
+                <span className="size-[7px] rounded-full bg-muted-foreground [animation:bdblink_1.2s_infinite_.2s]" />
+                <span className="size-[7px] rounded-full bg-muted-foreground [animation:bdblink_1.2s_infinite_.4s]" />
+              </div>
+            ) : null}
+
+            {error ? (
+              <p className="self-start text-xs text-destructive">
+                Ocurrió un error. Intenta de nuevo.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t border-border bg-card px-6 py-3.5">
+          <div className="mx-auto flex max-w-[720px] items-end gap-2.5">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send(input);
+                }
+              }}
+              placeholder="Escribe un mensaje…"
+              rows={1}
+              className="max-h-32 min-h-[42px] flex-1 resize-none rounded-[10px]"
+            />
+            <button
+              type="button"
+              onClick={() => send(input)}
+              disabled={isStreaming || input.trim().length === 0}
+              aria-label="Enviar"
+              className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
+            >
+              <Send className="size-4" />
+            </button>
+          </div>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
