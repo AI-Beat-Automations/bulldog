@@ -1,4 +1,4 @@
-import { streamText } from "ai";
+import { stepCountIs, streamText } from "ai";
 
 import { assertAiConfigured, chatModel } from "@/lib/ai";
 import {
@@ -8,6 +8,11 @@ import {
   saveMessage,
   type ConversationSource,
 } from "@/lib/chat/persistence";
+import { buildSystemPrompt } from "@/lib/chat/system";
+import {
+  CHECK_AVAILABILITY_TOOL,
+  checkAvailabilityTool,
+} from "@/lib/chat/tools/check-availability";
 import { getActiveSystemPrompt } from "@/lib/prompt/repository";
 import { corsHeaders, isAllowedOrigin } from "@/lib/cors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -128,13 +133,18 @@ export async function POST(request: Request) {
   const history = await loadHistory(id);
 
   // Lee la versión activa en cada request (sin cache): los cambios de prompt
-  // desde el admin aplican al instante.
-  const systemPrompt = await getActiveSystemPrompt();
+  // desde el admin aplican al instante. buildSystemPrompt antepone la mecánica
+  // code-owned (fecha/hora actual + tool de disponibilidad + reglas de fecha).
+  const activePrompt = await getActiveSystemPrompt();
+  const system = buildSystemPrompt(activePrompt);
 
   const result = streamText({
     model: chatModel,
-    system: systemPrompt,
+    system,
     messages: history.map((m) => ({ role: m.role, content: m.content })),
+    // Multi-step: sin stopWhen el modelo llama la tool y NO redacta la respuesta.
+    tools: { [CHECK_AVAILABILITY_TOOL]: checkAvailabilityTool },
+    stopWhen: stepCountIs(5),
     abortSignal: request.signal,
     onFinish: async ({ text }) => {
       const assistantText = text.trim();
