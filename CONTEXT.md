@@ -26,6 +26,18 @@ _Avoid_: "chatear con la gente" (no hay personas reales; es simulación), "bande
 De dónde nació un hilo: `widget` (cliente final real, vía bubble embebido) o `playground` (prueba interna del Admin). Las pruebas del Playground SÍ se persisten en el historial, pero marcadas para poder distinguirlas y filtrarlas; el listado de Conversaciones deja de ser "solo widget".
 _Avoid_: "canal" (no hay multi-canal: WhatsApp, etc.), "tenant".
 
+**Disponibilidad (Availability)**:
+Cupos libres para agendar una **Cita** en un día dado, agrupados por **Franja**. El **Asistente** la consulta (no la calcula) llamando la tool `check_availability` contra un webhook externo de n8n; el negocio opera en `America/Los_Angeles` (Las Vegas). Consultar disponibilidad **NO es agendar** — esta tool solo lee.
+_Avoid_: "agenda"/"reservar" (esto no crea ninguna Cita), "calendario" (no exponemos el calendario, solo el conteo).
+
+**Franja**:
+Bloque horario del día del negocio en hora de Las Vegas. Hoy n8n devuelve `08-12` (mañana, 8:00–12:00) y `12-17` (tarde, 12:00–17:00); el código las trata como **dinámicas** (itera las que vengan) y solo las traduce a lenguaje humano.
+_Avoid_: "horario" (a secas), "turno".
+
+**Cupo**:
+Una unidad de Disponibilidad dentro de una Franja. El número que devuelve n8n (`4`) es **cuántos Cupos quedan libres**; `0` o Franja ausente = sin Disponibilidad en esa Franja. El Asistente nunca inventa Cupos: si la respuesta viene vacía, dice que no hay Disponibilidad.
+_Avoid_: "slot" en el lenguaje de cara al visitante, "espacio".
+
 ## Relationships
 
 - El **System Prompt** gobierna al **Asistente** con el que conversa el público anónimo.
