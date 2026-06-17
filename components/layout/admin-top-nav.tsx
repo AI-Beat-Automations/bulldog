@@ -18,9 +18,10 @@ export function AdminTopNav() {
   const pathname = usePathname();
   const isConfig = pathname.startsWith("/admin/config");
   const isPlayground = pathname.startsWith("/admin/playground");
-  // "Conversaciones" cubre /admin y /admin/[id], pero no Playground ni Config.
+  const isCalls = pathname.startsWith("/admin/calls");
+  // "Conversaciones" cubre /admin y /admin/[id], pero no Playground, Config ni Calls.
   const isConversations =
-    !isConfig && !isPlayground && pathname.startsWith("/admin");
+    !isConfig && !isPlayground && !isCalls && pathname.startsWith("/admin");
 
   return (
     <nav className="flex h-14 items-center gap-4">
@@ -30,6 +31,13 @@ export function AdminTopNav() {
         className={cn(tabClass, tabState(isConversations))}
       >
         Conversaciones
+      </Link>
+      <Link
+        href="/admin/calls"
+        data-active={isCalls}
+        className={cn(tabClass, tabState(isCalls))}
+      >
+        Calls
       </Link>
       <Link
         href="/admin/playground"
