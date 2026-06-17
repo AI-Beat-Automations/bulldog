@@ -7,6 +7,7 @@ import { auth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { AdminTopNav } from "@/components/layout/admin-top-nav";
+import { AdminMobileNav } from "@/components/layout/admin-mobile-nav";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -15,10 +16,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const email = session.user?.email ?? "";
   const initial = email.charAt(0).toUpperCase() || "?";
 
+  async function signOutAction() {
+    "use server";
+    await signOut({ redirectTo: "/login" });
+  }
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-5">
-        <div className="flex items-center gap-5">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-4 md:px-5">
+        <div className="flex items-center gap-2.5 md:gap-5">
+          <AdminMobileNav email={email} signOutAction={signOutAction} />
           <Link
             href="/admin"
             className="flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-80"
@@ -33,7 +40,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               Admin
             </span>
           </Link>
-          <AdminTopNav />
+          <div className="hidden md:flex">
+            <AdminTopNav />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -41,12 +50,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <span className="flex size-[30px] items-center justify-center rounded-full bg-secondary text-[12.5px] font-semibold text-secondary-foreground">
             {initial}
           </span>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/login" });
-            }}
-          >
+          <form action={signOutAction} className="hidden md:block">
             <Button
               type="submit"
               variant="ghost"

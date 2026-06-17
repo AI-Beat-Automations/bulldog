@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { NAV_ITEMS, isNavItemActive } from "@/components/layout/nav-items";
 
 const tabClass =
   "inline-flex h-14 items-center border-b-2 border-transparent px-1 text-[13.5px] transition-colors";
@@ -16,43 +17,22 @@ function tabState(active: boolean) {
 
 export function AdminTopNav() {
   const pathname = usePathname();
-  const isConfig = pathname.startsWith("/admin/config");
-  const isPlayground = pathname.startsWith("/admin/playground");
-  const isCalls = pathname.startsWith("/admin/calls");
-  // "Conversaciones" cubre /admin y /admin/[id], pero no Playground, Config ni Calls.
-  const isConversations =
-    !isConfig && !isPlayground && !isCalls && pathname.startsWith("/admin");
 
   return (
     <nav className="flex h-14 items-center gap-4">
-      <Link
-        href="/admin"
-        data-active={isConversations}
-        className={cn(tabClass, tabState(isConversations))}
-      >
-        Conversaciones
-      </Link>
-      <Link
-        href="/admin/calls"
-        data-active={isCalls}
-        className={cn(tabClass, tabState(isCalls))}
-      >
-        Calls
-      </Link>
-      <Link
-        href="/admin/playground"
-        data-active={isPlayground}
-        className={cn(tabClass, tabState(isPlayground))}
-      >
-        Playground
-      </Link>
-      <Link
-        href="/admin/config"
-        data-active={isConfig}
-        className={cn(tabClass, tabState(isConfig))}
-      >
-        Configuración
-      </Link>
+      {NAV_ITEMS.map((item) => {
+        const active = isNavItemActive(pathname, item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            data-active={active}
+            className={cn(tabClass, tabState(active))}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
