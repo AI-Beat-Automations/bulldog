@@ -6,8 +6,14 @@ import {
   index,
   boolean,
   uniqueIndex,
+  bigint,
+  integer,
+  numeric,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+
+export type TranscriptTurn = { role: "agent" | "user"; content: string };
 
 export const chatMessageRoleEnum = pgEnum("chat_message_role", [
   "user",
@@ -71,6 +77,40 @@ export const promptVersions = pgTable(
       .where(sql`is_active`),
     // Listado del historial por fecha (más reciente primero).
     index("prompt_versions_created_idx").on(table.createdAt),
+  ]
+);
+
+export const calls = pgTable(
+  "calls",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    callId: text("call_id").notNull(), // Retell ID
+    agentId: text("agent_id").notNull(), // metadata only; does not resolve a company
+    customerName: text("customer_name"),
+    customerPhone: text("customer_phone"),
+    customerAddress: text("customer_address"),
+    customerCity: text("customer_city"),
+    customerZipcode: text("customer_zipcode"),
+    service: text("service"),
+    summary: text("summary"),
+    callDate: text("call_date"), // free-form ISO string from webhook
+    event: text("event"),
+    retellEvent: text("retell_event"),
+    callStatus: text("call_status"),
+    disconnectionReason: text("disconnection_reason"), // pure display metadata
+    startTimestamp: bigint("start_timestamp", { mode: "number" }),
+    endTimestamp: bigint("end_timestamp", { mode: "number" }),
+    durationMs: integer("duration_ms"),
+    audioUrl: text("audio_url"),
+    callCost: numeric("call_cost", { precision: 10, scale: 6 }), // public "Call cost", sourced from payload.call_cost (USD)
+    transcript: jsonb("transcript").$type<TranscriptTurn[]>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("calls_call_id_agent_id_idx").on(table.callId, table.agentId),
   ]
 );
 

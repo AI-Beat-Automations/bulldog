@@ -22,6 +22,13 @@
       "when": 1781565202306,
       "tag": "0002_unknown_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781662551112,
+      "tag": "0003_mighty_clea",
+      "breakpoints": true
     }
   ]
 }
