@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
-import { Bot, User } from "lucide-react";
+import { Bot, ChevronLeft, User } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { getConversation, loadHistory } from "@/lib/chat/persistence";
@@ -29,9 +30,17 @@ export default async function AdminThreadPage({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex shrink-0 items-center justify-between gap-3.5 border-b border-border px-6 py-3.5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
+      <header className="flex shrink-0 items-center justify-between gap-3.5 border-b border-border px-4 py-3.5 md:px-6">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href="/admin"
+            aria-label="Volver a conversaciones"
+            className="-ml-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:hidden"
+          >
+            <ChevronLeft className="size-5" />
+          </Link>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5">
             <h2 className="text-[15px] font-semibold -tracking-[0.01em] text-foreground">
               Conversación
             </h2>
@@ -50,13 +59,14 @@ export default async function AdminThreadPage({
           <div className="mt-0.5 truncate font-mono text-[11.5px] text-muted-foreground/80">
             {id} · creada {dateFormatter.format(new Date(conversation.createdAt))}
           </div>
+          </div>
         </div>
         <span className="shrink-0 whitespace-nowrap rounded-md bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground">
           {messages.length} {messages.length === 1 ? "mensaje" : "mensajes"}
         </span>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-auto bg-muted px-6 py-7">
+      <div className="min-h-0 flex-1 overflow-auto bg-muted px-4 py-6 md:px-6 md:py-7">
         {messages.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             Conversación vacía.
