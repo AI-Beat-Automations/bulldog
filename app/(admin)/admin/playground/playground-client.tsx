@@ -3,11 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { Bot, Plus, Send } from "lucide-react";
+import { Bot, FileText, Plus, Send } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { loadPlaygroundThread } from "./actions";
 
 // Clave SEPARADA de la del widget ("bulldog-conversation-id") para que, sirviendo
@@ -71,6 +78,35 @@ function messageText(message: UIMessage): string {
     .join("");
 }
 
+const PLAYGROUND_INTRO =
+  "Hazte pasar por un visitante y prueba al asistente antes de publicar cambios de prompt.";
+
+// Card "Prompt activo": se reutiliza en el aside (desktop) y en el Sheet (móvil).
+function PromptActiveCard({
+  versionLabel,
+  promptPreview,
+}: {
+  versionLabel: string;
+  promptPreview: string;
+}) {
+  return (
+    <div className="rounded-[11px] border border-border bg-card p-3.5 shadow-xs">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+        Prompt activo
+      </div>
+      <div className="mb-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-[3px] text-xs text-secondary-foreground">
+          <span className="size-1.5 rounded-full bg-emerald-500" />
+          {versionLabel}
+        </span>
+      </div>
+      <p className="text-[12.5px] leading-[1.6] text-muted-foreground">
+        {promptPreview}
+      </p>
+    </div>
+  );
+}
+
 export function PlaygroundClient({
   promptPreview,
   versionLabel,
@@ -91,6 +127,7 @@ export function PlaygroundClient({
   });
 
   const [input, setInput] = useState("");
+  const [promptOpen, setPromptOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const isStreaming = status === "submitted" || status === "streaming";
@@ -148,31 +185,17 @@ export function PlaygroundClient({
 
   return (
     <div className="flex min-h-0 flex-1">
-      <aside className="flex w-[300px] shrink-0 flex-col gap-5 overflow-auto border-r border-border bg-muted px-5 py-[22px]">
+      <aside className="hidden w-[300px] shrink-0 flex-col gap-5 overflow-auto border-r border-border bg-muted px-5 py-[22px] md:flex">
         <div>
           <h1 className="text-[17px] font-semibold -tracking-[0.01em] text-foreground">
             Playground
           </h1>
           <p className="mt-1.5 text-[13px] leading-[1.55] text-muted-foreground">
-            Hazte pasar por un visitante y prueba al asistente antes de publicar
-            cambios de prompt.
+            {PLAYGROUND_INTRO}
           </p>
         </div>
 
-        <div className="rounded-[11px] border border-border bg-card p-3.5 shadow-xs">
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
-            Prompt activo
-          </div>
-          <div className="mb-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-[3px] text-xs text-secondary-foreground">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              {versionLabel}
-            </span>
-          </div>
-          <p className="text-[12.5px] leading-[1.6] text-muted-foreground">
-            {promptPreview}
-          </p>
-        </div>
+        <PromptActiveCard versionLabel={versionLabel} promptPreview={promptPreview} />
 
         <Button
           type="button"
@@ -186,9 +209,49 @@ export function PlaygroundClient({
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col bg-background">
+        {/* Barra compacta sólo móvil: el aside no cabe en pantalla angosta. */}
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2.5 md:hidden">
+          <h1 className="text-[15px] font-semibold -tracking-[0.01em] text-foreground">
+            Playground
+          </h1>
+          <div className="flex items-center gap-2">
+            <Sheet open={promptOpen} onOpenChange={setPromptOpen}>
+              <SheetTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                  <FileText className="size-3.5" />
+                  Prompt activo
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" aria-describedby={undefined}>
+                <SheetHeader>
+                  <SheetTitle>Playground</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-4 overflow-auto px-4 pb-4">
+                  <p className="text-[13px] leading-[1.55] text-muted-foreground">
+                    {PLAYGROUND_INTRO}
+                  </p>
+                  <PromptActiveCard
+                    versionLabel={versionLabel}
+                    promptPreview={promptPreview}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              onClick={handleNewConversation}
+              aria-label="Nueva conversación"
+            >
+              <Plus className="size-[15px]" />
+            </Button>
+          </div>
+        </div>
+
         <div
           ref={listRef}
-          className="min-h-0 flex-1 overflow-auto bg-muted px-6 py-7"
+          className="min-h-0 flex-1 overflow-auto bg-muted px-4 py-6 md:px-6 md:py-7"
         >
           <div className="mx-auto flex max-w-[720px] flex-col gap-4">
             {messages.length === 0 ? (
@@ -244,7 +307,7 @@ export function PlaygroundClient({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-border bg-card px-6 py-3.5">
+        <div className="shrink-0 border-t border-border bg-card px-4 py-3.5 md:px-6">
           <div className="mx-auto flex max-w-[720px] items-end gap-2.5">
             <Textarea
               value={input}
