@@ -135,56 +135,92 @@ export function CallsClient({
           No calls found
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="px-4">Customer</TableHead>
-                <TableHead className="px-4">Phone</TableHead>
-                <TableHead className="px-4">Status</TableHead>
-                <TableHead className="px-4">Duration</TableHead>
-                <TableHead className="px-4">Date</TableHead>
-                <TableHead className="px-4 text-right">Cost</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {calls.map((call) => (
-                <TableRow
-                  key={call.id}
-                  tabIndex={0}
-                  role="button"
-                  onClick={() => setSelected(call)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelected(call);
-                    }
-                  }}
-                  className="cursor-pointer"
-                >
-                  <TableCell className="px-4 font-medium text-foreground">
-                    {call.customerName ?? "Unknown"}
-                  </TableCell>
-                  <TableCell className="px-4 font-mono text-muted-foreground">
-                    {formatUsPhone(call.customerPhone)}
-                  </TableCell>
-                  <TableCell className="px-4">
-                    {statusBadge(call.callStatus)}
-                  </TableCell>
-                  <TableCell className="px-4 tabular-nums text-muted-foreground">
-                    {formatDuration(call.durationMs)}
-                  </TableCell>
-                  <TableCell className="px-4 text-muted-foreground">
-                    {formatDate(call.callDate ?? call.createdAt)}
-                  </TableCell>
-                  <TableCell className="px-4 text-right tabular-nums text-foreground">
-                    {formatCost(call.callCost)}
-                  </TableCell>
+        <>
+          {/* Tabla: desktop (md+). En móvil haría scroll horizontal. */}
+          <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-xs md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-4">Customer</TableHead>
+                  <TableHead className="px-4">Phone</TableHead>
+                  <TableHead className="px-4">Status</TableHead>
+                  <TableHead className="px-4">Duration</TableHead>
+                  <TableHead className="px-4">Date</TableHead>
+                  <TableHead className="px-4 text-right">Cost</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {calls.map((call) => (
+                  <TableRow
+                    key={call.id}
+                    tabIndex={0}
+                    role="button"
+                    onClick={() => setSelected(call)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelected(call);
+                      }
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <TableCell className="px-4 font-medium text-foreground">
+                      {call.customerName ?? "Unknown"}
+                    </TableCell>
+                    <TableCell className="px-4 font-mono text-muted-foreground">
+                      {formatUsPhone(call.customerPhone)}
+                    </TableCell>
+                    <TableCell className="px-4">
+                      {statusBadge(call.callStatus)}
+                    </TableCell>
+                    <TableCell className="px-4 tabular-nums text-muted-foreground">
+                      {formatDuration(call.durationMs)}
+                    </TableCell>
+                    <TableCell className="px-4 text-muted-foreground">
+                      {formatDate(call.callDate ?? call.createdAt)}
+                    </TableCell>
+                    <TableCell className="px-4 text-right tabular-nums text-foreground">
+                      {formatCost(call.callCost)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Tarjetas apiladas: móvil (<md). */}
+          <div className="flex flex-col gap-2.5 md:hidden">
+            {calls.map((call) => (
+              <button
+                key={call.id}
+                type="button"
+                onClick={() => setSelected(call)}
+                className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3.5 text-left shadow-xs transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                    {call.customerName ?? "Unknown"}
+                  </span>
+                  {statusBadge(call.callStatus)}
+                </div>
+                <div className="font-mono text-xs text-muted-foreground">
+                  {formatUsPhone(call.customerPhone) || "—"}
+                </div>
+                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <span className="min-w-0 truncate">
+                    {formatDate(call.callDate ?? call.createdAt)}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3 tabular-nums">
+                    <span>{formatDuration(call.durationMs)}</span>
+                    <span className="text-foreground">
+                      {formatCost(call.callCost)}
+                    </span>
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       <div className="flex items-center justify-between gap-3">
