@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { listConversationsWithTail } from "@/lib/chat/persistence";
-import {
-  ConversationList,
-  type ConversationRow,
-} from "@/components/admin/conversation-list";
+import { type ConversationRow } from "@/components/admin/conversation-list";
+import { ConversationsShell } from "@/components/admin/conversations-shell";
 
 const timeFmt = new Intl.DateTimeFormat("es-MX", {
   hour: "2-digit",
@@ -59,13 +57,8 @@ export default async function ConversationsLayout({
   });
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <aside className="flex min-h-0 w-[368px] shrink-0 flex-col border-r border-border bg-muted">
-        <ConversationList rows={rows} total={items.length} />
-      </aside>
-      <section className="flex min-h-0 flex-1 flex-col bg-background">
-        {children}
-      </section>
-    </div>
+    <ConversationsShell rows={rows} total={items.length}>
+      {children}
+    </ConversationsShell>
   );
 }
