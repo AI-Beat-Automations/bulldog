@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:#e4e4e7;border-radius:8px;border:2px solid #fff;}
+  textarea:focus,input:focus{outline:none;}
+  @keyframes bdfade{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+  @keyframes bdblink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+</style>
+</helmet>
+<div data-screen-label="Bulldog Admin B" style="display:flex;flex-direction:column;height:100vh;width:100%;overflow:hidden;font-family:'Geist',system-ui,-apple-system,sans-serif;color:#09090b;background:#ffffff;-webkit-font-smoothing:antialiased;--bd-primary:{{ accentColor }};--bd-primary-fg:{{ accentFg }};">
+
+  <header style="height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;border-bottom:1px solid #e4e4e7;background:#fff;">
+    <div style="display:flex;align-items:center;gap:22px;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="width:28px;height:28px;border-radius:8px;background:var(--bd-primary,#18181b);color:var(--bd-primary-fg,#fafafa);display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.25 16.25h1.5L12 17z"/><path d="M16 14v.5"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.702 11.702 0 0 0-.493-3.309"/><path d="M8 14v.5"/><path d="M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5-1.931.722-3.576-.297-3.656-1-.113-.994 1.177-6.53 4-7 1.923-.321 3.651.845 3.651 2.235A7.497 7.497 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5"/></svg>
+        </span>
+        <span style="font-size:14.5px;font-weight:600;letter-spacing:-0.01em;">Bulldog</span>
+        <span style="font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;background:#f4f4f5;color:#71717a;border-radius:5px;padding:2px 6px;">Admin</span>
+      </div>
+      <nav style="display:flex;align-items:center;gap:4px;height:56px;">
+        <button onClick="{{ navConversations }}" style="{{ tabConvStyle }}">Conversaciones</button>
+        <button onClick="{{ navPlayground }}" style="{{ tabPgStyle }}">Playground</button>
+        <button onClick="{{ navConfig }}" style="{{ tabConfigStyle }}">Configuración</button>
+      </nav>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="display:flex;align-items:center;gap:8px;color:#71717a;font-size:12.5px;"><span style="width:7px;height:7px;border-radius:999px;background:#10b981;"></span>Widget activo</span>
+      <span style="width:30px;height:30px;border-radius:999px;background:#e4e4e7;color:#3f3f46;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;">A</span>
+    </div>
+  </header>
+
+  <sc-if value="{{ isConversations }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Conversaciones · Plática" style="flex:1;display:flex;min-height:0;">
+
+    <div style="width:368px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid #e4e4e7;background:#fafafa;min-height:0;">
+      <div style="padding:16px 16px 12px;flex-shrink:0;border-bottom:1px solid #ededef;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h1 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;">Conversaciones</h1>
+          <span style="font-size:12px;color:#71717a;font-variant-numeric:tabular-nums;">{{ totalCount }} hilos</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e4e4e7;border-radius:9px;padding:0 10px;height:34px;box-shadow:0 1px 2px rgba(0,0,0,.04);" style-focus="border-color:var(--bd-primary,#18181b);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Buscar…" style="border:none;background:transparent;flex:1;font-family:inherit;font-size:13px;color:#09090b;min-width:0;" />
+        </div>
+        <div style="display:flex;gap:2px;background:#f0f0f1;padding:3px;border-radius:8px;margin-top:10px;">
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+            <button onClick="{{ f.on }}" style="{{ f.style }}">{{ f.label }}<span style="{{ f.countStyle }}">{{ f.count }}</span></button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1;overflow:auto;min-height:0;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="7">
+          <button onClick="{{ r.on }}" style="{{ r.style }}">
+            <span style="width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid #e4e4e7;color:#52525b;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+            </span>
+            <span style="flex:1;min-width:0;line-height:1.3;">
+              <span style="display:flex;align-items:center;gap:8px;">
+                <span style="flex:1;min-width:0;font-size:13.5px;font-weight:500;color:#18181b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.preview }}</span>
+                <span style="font-size:11.5px;color:#a1a1aa;flex-shrink:0;font-variant-numeric:tabular-nums;">{{ r.last }}</span>
+              </span>
+              <span style="display:flex;align-items:center;gap:7px;margin-top:3px;">
+                <span style="flex:1;min-width:0;font-size:12.5px;color:#71717a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.snippet }}</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#71717a;flex-shrink:0;"><span style="width:6px;height:6px;border-radius:999px;background:{{ r.dotColor }};"></span>{{ r.sourceLabel }}</span>
+              </span>
+            </span>
+          </button>
+        </sc-for>
+        <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:48px 24px;text-align:center;color:#a1a1aa;font-size:13px;">Sin resultados.</div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff;">
+      <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
+      <header style="padding:14px 24px;border-bottom:1px solid #f1f1f2;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-shrink:0;">
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <h2 style="margin:0;font-size:15px;font-weight:600;letter-spacing:-0.01em;">Conversación</h2>
+            <span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e4e4e7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;color:#3f3f46;"><span style="width:6px;height:6px;border-radius:999px;background:{{ selDotColor }};"></span>{{ selSourceLabel }}</span>
+          </div>
+          <div style="font-size:11.5px;color:#a1a1aa;font-family:'Geist Mono',monospace;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ selFullId }} · creada {{ selCreated }}</div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#f4f4f5;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:500;color:#3f3f46;white-space:nowrap;flex-shrink:0;">{{ selCount }} mensajes</span>
+      </header>
+      <div ref="{{ threadRef }}" style="flex:1;overflow:auto;padding:28px 24px;background:#fafafa;min-height:0;">
+        <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px;">
+          <sc-for list="{{ selMsgs }}" as="m" hint-placeholder-count="4">
+            <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:row-reverse;gap:12px;align-items:flex-start;animation:bdfade .3s ease both;">
+              <span style="width:30px;height:30px;border-radius:999px;background:var(--bd-primary,#18181b);color:var(--bd-primary-fg,#fafafa);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <div style="max-width:78%;display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+                <span style="font-size:10.5px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;color:#a1a1aa;padding:0 2px;">Cliente</span>
+                <div style="background:var(--bd-primary,#18181b);color:var(--bd-primary-fg,#fafafa);border-radius:15px;border-top-right-radius:5px;padding:11px 15px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;">{{ m.c }}</div>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ m.isAssistant }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:12px;align-items:flex-start;animation:bdfade .3s ease both;">
+              <span style="width:30px;height:30px;border-radius:999px;background:#fff;border:1px solid #e4e4e7;color:#52525b;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></span>
+              <div style="max-width:78%;display:flex;flex-direction:column;align-items:flex-start;gap:5px;">
+                <span style="font-size:10.5px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;color:#a1a1aa;padding:0 2px;">Asistente</span>
+                <div style="background:#fff;color:#18181b;border:1px solid #e4e4e7;border-radius:15px;border-top-left-radius:5px;padding:11px 15px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.04);">{{ m.c }}</div>
+              </div>
+            </div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#a1a1aa;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>
+        <p style="margin:0;font-size:13.5px;">Selecciona una conversación para leer la plática.</p>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isPlayground }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Playground" style="flex:1;display:flex;min-height:0;">
+    <div style="width:300px;flex-shrink:0;border-right:1px solid #e4e4e7;background:#fafafa;padding:22px 20px;display:flex;flex-direction:column;gap:20px;min-height:0;overflow:auto;">
+      <div>
+        <h1 style="margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em;">Playground</h1>
+        <p style="margin:6px 0 0;font-size:13px;color:#71717a;line-height:1.55;">Hazte pasar por un visitante y prueba al asistente antes de publicar cambios de prompt.</p>
+      </div>
+      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:11px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;color:#a1a1aa;margin-bottom:8px;">Prompt activo</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="display:inline-flex;align-items:center;gap:6px;background:#f4f4f5;border-radius:999px;padding:3px 10px;font-size:12px;color:#52525b;"><span style="width:6px;height:6px;border-radius:999px;background:#10b981;"></span>Versión v3</span></div>
+        <p style="margin:0;font-size:12.5px;color:#71717a;line-height:1.6;">{{ promptPreview }}</p>
+      </div>
+      <button onClick="{{ newPg }}" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#fff;border:1px solid #e4e4e7;border-radius:9px;padding:9px 12px;font-size:13px;font-weight:500;color:#3f3f46;cursor:pointer;font-family:inherit;" style-hover="background:#f4f4f5;color:#09090b;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Nueva conversación
+      </button>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff;">
+      <div ref="{{ pgListRef }}" style="flex:1;overflow:auto;padding:30px 24px;background:#fafafa;display:flex;flex-direction:column;gap:16px;min-height:0;">
+        <div style="width:100%;max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
+          <sc-if value="{{ pgEmpty }}" hint-placeholder-val="{{ true }}">
+          <div style="margin:40px auto;max-width:420px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;">
+            <span style="width:48px;height:48px;border-radius:13px;background:var(--bd-primary,#18181b);color:var(--bd-primary-fg,#fafafa);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></span>
+            <p style="margin:0;font-size:14px;color:#52525b;line-height:1.6;">Escribe un mensaje para empezar a probar al asistente.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+              <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+                <button onClick="{{ s.on }}" style="background:#fff;border:1px solid #e4e4e7;border-radius:999px;padding:7px 13px;font-size:12.5px;color:#3f3f46;cursor:pointer;font-family:inherit;" style-hover="background:#f4f4f5;border-color:#d4d4d8;">{{ s.text }}</button>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+          <sc-for list="{{ pgMsgs }}" as="m" hint-placeholder-count="0">
+            <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ true }}">
+            <div style="align-self:flex-end;max-width:80%;background:var(--bd-primary,#18181b);color:var(--bd-primary-fg,#fafafa);border-radius:15px;border-top-right-radius:5px;padding:10px 14px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;animation:bdfade .25s ease both;">{{ m.c }}</div>
+            </sc-if>
+            <sc-if value="{{ m.isAssistant }}" hint-placeholder-val="{{ false }}">
+            <div style="align-self:flex-start;max-width:80%;background:#fff;color:#18181b;border:1px solid #e4e4e7;border-radius:15px;border-top-left-radius:5px;padding:10px 14px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.04);animation:bdfade .25s ease both;">{{ m.c }}</div>
+            </sc-if>
+          </sc-for>
+          <sc-if value="{{ pgThinking }}" hint-placeholder-val="{{ false }}">
+          <div style="align-self:flex-start;background:#fff;border:1px solid #e4e4e7;border-radius:15px;border-top-left-radius:5px;padding:13px 16px;display:flex;gap:5px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+            <span style="width:7px;height:7px;border-radius:999px;background:#a1a1aa;animation:bdblink 1.2s infinite;"></span><span style="width:7px;height:7px;border-radius:999px;background:#a1a1aa;animation:bdblink 1.2s infinite .2s;"></span><span style="width:7px;height:7px;border-radius:999px;background:#a1a1aa;animation:bdblink 1.2s infinite .4s;"></span>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex-shrink:0;padding:14px 24px;border-top:1px solid #f1f1f2;background:#fff;">
+        <div style="max-width:720px;margin:0 auto;display:flex;align-items:flex-end;gap:10px;">
+          <textarea value="{{ pgInput }}" onInput="{{ onPgInput }}" onKeyDown="{{ onPgKey }}" placeholder="Escribe un mensaje…" rows="1" style="flex:1;resize:none;border:1px solid #e4e4e7;border-radius:10px;padding:10px 13px;font-family:inherit;font-size:14px;line-height:1.5;max-height:128px;min-height:42px;color:#09090b;background:#fff;" style-focus="border-color:var(--bd-primary,#18181b);"></textarea>
+          <button onClick="{{ sendPg }}" style="{{ sendStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isConfig }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Configuración" style="flex:1;overflow:auto;min-height:0;background:#fafafa;">
+    <div style="max-width:760px;margin:0 auto;padding:32px 24px;display:flex;flex-direction:column;gap:26px;">
+      <div><h1 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em;">Configuración</h1><p style="margin:5px 0 0;font-size:13.5px;color:#71717a;">Instrucciones que recibe el modelo en cada conversación. Al guardar se crea una versión nueva y se activa.</p></div>
+      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:13px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><label style="font-size:13.5px;font-weight:600;">Prompt del asistente</label><span style="display:inline-flex;align-items:center;gap:6px;background:#f4f4f5;border-radius:999px;padding:3px 10px;font-size:12px;color:#52525b;"><span style="width:6px;height:6px;border-radius:999px;background:#10b981;"></span>Versión activa · v3</span></div>
+        <textarea value="{{ activePrompt }}" onInput="{{ onPrompt }}" rows="8" style="width:100%;resize:vertical;border:1px solid #e4e4e7;border-radius:10px;padding:14px;font-family:'Geist Mono',monospace;font-size:13px;line-height:1.65;color:#18181b;background:#fafafa;min-height:180px;" style-focus="border-color:var(--bd-primary,#18181b);background:#fff;"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button style="background:var(--bd-primary,#18181b);color:var(--bd-primary-fg,#fafafa);border:none;border-radius:9px;padding:9px 18px;font-size:13.5px;font-weight:500;cursor:pointer;font-family:inherit;" style-hover="opacity:.9;">Guardar versión</button></div>
+      </div>
+      <div>
+        <h3 style="margin:0 0 10px;font-size:13.5px;font-weight:600;">Historial de versiones</h3>
+        <div style="border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+          <sc-for list="{{ versions }}" as="v" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border-top:1px solid #f1f1f2;">
+              <div style="min-width:0;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13.5px;font-weight:500;font-variant-numeric:tabular-nums;">{{ v.label }}</span><sc-if value="{{ v.isActive }}" hint-placeholder-val="{{ false }}"><span style="background:#f4f4f5;border-radius:6px;padding:1px 8px;font-size:11.5px;font-weight:500;color:#3f3f46;">Activa</span></sc-if></div><p style="margin:3px 0 0;font-size:12.5px;color:#a1a1aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:440px;">{{ v.preview }}</p></div>
+              <sc-if value="{{ v.canActivate }}" hint-placeholder-val="{{ true }}"><button style="background:#fff;border:1px solid #e4e4e7;border-radius:8px;padding:6px 13px;font-size:12.5px;font-weight:500;color:#3f3f46;cursor:pointer;font-family:inherit;flex-shrink:0;" style-hover="background:#fafafa;color:#09090b;">Activar</button></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:820},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Zinc&quot;,&quot;Azul&quot;,&quot;Esmeralda&quot;,&quot;Violeta&quot;],&quot;default&quot;:&quot;Zinc&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.CONVS = [
+      { id: "a3f8c1d2e7b94f01", source: "widget", created: "15 jun 2026, 10:32", last: "10:37", msgs: [
+        { r: "user", c: "Hola, ¿cuánto cuesta el plan básico de monitoreo?" },
+        { r: "assistant", c: "¡Hola! El plan Básico cuesta $299 MXN al mes e incluye monitoreo 24/7, app móvil y un sensor de puerta. ¿Te muestro los planes superiores?" },
+        { r: "user", c: "Sí, por favor" },
+        { r: "assistant", c: "Claro: el plan Plus ($499/mes) añade 3 sensores y cámara HD; el Pro ($799/mes) incluye cámaras ilimitadas y respuesta con guardia. ¿Quieres que te contacte un asesor?" } ] },
+      { id: "b7e2a9f04c1d8e22", source: "widget", created: "15 jun 2026, 09:58", last: "10:20", msgs: [
+        { r: "user", c: "La app no me deja ver las cámaras" },
+        { r: "assistant", c: "Vamos a resolverlo. ¿La app muestra algún mensaje de error o solo se queda cargando?" },
+        { r: "user", c: "Solo se queda cargando" },
+        { r: "assistant", c: "Gracias. Cierra la app por completo, verifica que el router esté encendido y vuelve a abrirla. Si persiste, reinicia la cámara desde Ajustes › Dispositivos. ¿Funcionó?" } ] },
+      { id: "c1d4e8a2b6f37790", source: "playground", created: "15 jun 2026, 09:10", last: "09:11", msgs: [
+        { r: "user", c: "Eres una porquería de empresa" },
+        { r: "assistant", c: "Lamento mucho que tengas esa impresión. Quiero ayudarte a resolver lo que pasó. ¿Me cuentas qué sucedió para darle seguimiento de inmediato?" } ] },
+      { id: "d9a0b3c5e2f14488", source: "widget", created: "15 jun 2026, 07:40", last: "07:42", msgs: [
+        { r: "user", c: "Me cobraron dos veces este mes" },
+        { r: "assistant", c: "Lamento el inconveniente. Pudo tratarse de un cargo duplicado. Para revisarlo necesito los últimos 4 dígitos de tu tarjeta y la fecha del cargo. Reembolsamos duplicados en 3–5 días hábiles." } ] },
+      { id: "e2f5c8b1a4d09933", source: "widget", created: "15 jun 2026, 09:14", last: "09:16", msgs: [
+        { r: "user", c: "¿Dan servicio en Monterrey?" },
+        { r: "assistant", c: "Sí, tenemos cobertura en Monterrey y su área metropolitana, incluyendo San Pedro, Guadalupe y Apodaca. ¿En qué colonia te encuentras?" } ] },
+      { id: "f3a6d9c2b5e80144", source: "widget", created: "14 jun 2026, 18:40", last: "ayer", msgs: [
+        { r: "user", c: "¿La instalación tiene costo?" },
+        { r: "assistant", c: "La instalación estándar es gratuita al contratar cualquier plan anual. Para planes mensuales tiene un costo único de $499 MXN. Un técnico la realiza en 1–2 horas." },
+        { r: "user", c: "Perfecto. ¿Cuánto tardan en agendar?" },
+        { r: "assistant", c: "Normalmente agendamos en 48 horas hábiles. ¿Te gustaría que reserve una visita? Solo necesito tu código postal." } ] },
+      { id: "07b1e4a8c3d2f566", source: "playground", created: "14 jun 2026, 11:05", last: "ayer", msgs: [
+        { r: "user", c: "¿Qué hago si se activa la alarma por error?" },
+        { r: "assistant", c: "Si la alarma se activa por error, ingresa tu código de 4 dígitos en el panel o desde la app para desarmarla. Si recibes una llamada de verificación, comparte tu palabra de seguridad. ¿Necesitas ayuda para restablecer tu código?" } ] },
+      { id: "18c2f5b9d4e3a677", source: "widget", created: "13 jun 2026, 16:22", last: "13 jun", msgs: [
+        { r: "user", c: "¿Tienen soporte los fines de semana?" },
+        { r: "assistant", c: "Sí, nuestro soporte técnico está disponible los 7 días, de 8:00 a 22:00. El monitoreo de alarmas opera 24/7 sin excepción." } ] },
+      { id: "29d3a6c0e5f4b788", source: "widget", created: "12 jun 2026, 14:03", last: "12 jun", msgs: [
+        { r: "user", c: "Quiero cancelar mi servicio" },
+        { r: "assistant", c: "Lamento que quieras irte. ¿Me confirmas el motivo? Si es por precio, tenemos opciones de pausa temporal sin costo hasta por 3 meses." },
+        { r: "user", c: "Me mudo de país" },
+        { r: "assistant", c: "Entiendo. En ese caso podemos cancelar sin penalización presentando tu comprobante. Te paso con un asesor para finalizar el trámite. ¿Tu correo registrado sigue siendo el mismo?" } ] }
+    ];
+    this.state = { screen: "conversations", filter: "all", search: "", selectedId: this.CONVS[0].id, pgMsgs: [], pgInput: "", pgThinking: false, prompt: "" };
+    this.pgListRef = React.createRef();
+    this.threadRef = React.createRef();
+    this.ACCENTS = { Zinc: ["#18181b", "#fafafa"], Azul: ["#2563eb", "#ffffff"], Esmeralda: ["#059669", "#ffffff"], Violeta: ["#6d28d9", "#ffffff"] };
+    this.DEFAULT_PROMPT = "Eres el asistente virtual de Bulldog Seguridad. Responde de forma clara, cálida y concisa en el idioma del usuario. Ayudas con planes de monitoreo, instalación, soporte de la app y dudas de facturación. Nunca inventes precios; si no sabes algo, ofrece pasar con un asesor humano.";
+    this.VERSIONS = [
+      { label: "15 jun 2026, 08:12", isActive: true, body: "Eres el asistente virtual de Bulldog Seguridad. Responde de forma clara, cálida y concisa…" },
+      { label: "10 jun 2026, 17:45", isActive: false, body: "Eres un asistente de Bulldog. Ayuda con planes y soporte. Sé breve." },
+      { label: "02 jun 2026, 09:30", isActive: false, body: "Asistente de IA útil, claro y conciso. Responde en el idioma del usuario." }
+    ];
+    this.SUGGESTIONS = ["¿Cuánto cuesta el plan?", "¿Dan servicio en mi zona?", "Quiero cancelar"];
+  }
+
+  componentDidUpdate(prev) {
+    if (prev.pgMsgs !== this.state.pgMsgs || prev.pgThinking !== this.state.pgThinking) { const el = this.pgListRef.current; if (el) el.scrollTop = el.scrollHeight; }
+    if (prev.selectedId !== this.state.selectedId) { const el = this.threadRef.current; if (el) el.scrollTop = 0; }
+  }
+
+  go(screen) { this.setState({ screen }); }
+  firstUser(c) { const u = c.msgs.find(m => m.r === "user"); return u ? u.c : "(sin mensajes)"; }
+  lastSnippet(c) { const m = c.msgs[c.msgs.length - 1]; if (!m) return ""; return (m.r === "user" ? "Cliente: " : "Asistente: ") + m.c; }
+
+  cannedReply(t) {
+    const x = t.toLowerCase();
+    if (x.includes("precio") || x.includes("cuesta") || x.includes("plan") || x.includes("costo")) return "Tenemos tres planes: Básico ($299/mes), Plus ($499/mes) y Pro ($799/mes). Todos incluyen monitoreo 24/7. ¿Quieres que te detalle alguno?";
+    if (x.includes("hola") || x.includes("buenas") || x.includes("buenos")) return "¡Hola! Soy el asistente de Bulldog. ¿En qué puedo ayudarte hoy con tu seguridad?";
+    if (x.includes("horario") || x.includes("soporte") || x.includes("atienden")) return "Nuestro soporte técnico atiende los 7 días de 8:00 a 22:00, y el monitoreo de alarmas opera 24/7.";
+    if (x.includes("cancel")) return "Lamento que quieras cancelar. ¿Me compartes el motivo? Quizá pueda ofrecerte una pausa temporal sin costo.";
+    if (x.includes("zona") || x.includes("monterrey") || x.includes("cobertura") || x.includes("ciudad")) return "Damos cobertura en las principales zonas metropolitanas. ¿En qué ciudad y colonia te encuentras?";
+    if (x.includes("cámara") || x.includes("camara") || x.includes("app")) return "Para problemas con la app o cámaras, ciérrala por completo y reábrela. Si sigue, reinicia el dispositivo desde Ajustes › Dispositivos.";
+    return "Gracias por tu mensaje. Con gusto te ayudo: ¿podrías darme un poco más de detalle para orientarte mejor?";
+  }
+  sendText(text) {
+    const t = (text || "").trim(); if (!t || this.state.pgThinking) return;
+    this.setState(s => ({ pgMsgs: [...s.pgMsgs, { r: "user", c: t }], pgInput: "", pgThinking: true }));
+    setTimeout(() => { this.setState(s => ({ pgMsgs: [...s.pgMsgs, { r: "assistant", c: this.cannedReply(t) }], pgThinking: false })); }, 950);
+  }
+
+  tabStyle(active) {
+    const base = "height:56px;padding:0 4px;border:none;background:transparent;font-family:inherit;font-size:13.5px;cursor:pointer;border-bottom:2px solid transparent;margin:0 8px;transition:color .12s;";
+    return active ? base + "color:#09090b;font-weight:600;border-bottom-color:var(--bd-primary,#18181b);" : base + "color:#71717a;font-weight:500;";
+  }
+  filterStyle(active) {
+    const base = "flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:5px 8px;border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:background .12s;";
+    return active ? base + "background:#fff;color:#09090b;box-shadow:0 1px 2px rgba(0,0,0,.1);" : base + "background:transparent;color:#71717a;";
+  }
+  filterCountStyle(active) { return "font-size:10.5px;font-weight:600;border-radius:5px;padding:0 5px;font-variant-numeric:tabular-nums;" + (active ? "background:#f4f4f5;color:#3f3f46;" : "background:#e4e4e7;color:#71717a;"); }
+  rowStyle(selected) {
+    const base = "display:flex;gap:11px;align-items:flex-start;width:100%;text-align:left;padding:12px 14px;border:none;border-bottom:1px solid #ededef;cursor:pointer;font-family:inherit;border-left:2px solid transparent;transition:background .1s;";
+    return selected ? base + "background:#fff;border-left-color:var(--bd-primary,#18181b);" : base + "background:transparent;";
+  }
+
+  renderVals() {
+    const accent = this.ACCENTS[this.props.accent] || this.ACCENTS.Zinc;
+    const all = this.CONVS;
+    const counts = { all: all.length, widget: all.filter(c => c.source === "widget").length, playground: all.filter(c => c.source === "playground").length };
+    const q = this.state.search.trim().toLowerCase();
+    let list = all.filter(c => this.state.filter === "all" ? true : c.source === this.state.filter);
+    if (q) list = list.filter(c => this.firstUser(c).toLowerCase().includes(q) || this.lastSnippet(c).toLowerCase().includes(q));
+    const rows = list.map(c => ({
+      preview: this.firstUser(c), snippet: this.lastSnippet(c), last: c.last,
+      sourceLabel: c.source === "playground" ? "Playground" : "Cliente", dotColor: c.source === "playground" ? "#a1a1aa" : "#10b981",
+      on: () => this.setState({ selectedId: c.id }), style: this.rowStyle(c.id === this.state.selectedId)
+    }));
+    const defs = [{ key: "all", label: "Todas" }, { key: "widget", label: "Clientes" }, { key: "playground", label: "Playground" }];
+    const filters = defs.map(d => ({ label: d.label, count: counts[d.key], on: () => this.setState({ filter: d.key }), style: this.filterStyle(this.state.filter === d.key), countStyle: this.filterCountStyle(this.state.filter === d.key) }));
+    const sel = this.CONVS.find(c => c.id === this.state.selectedId) || null;
+    const selMsgs = sel ? sel.msgs.map(m => ({ c: m.c, isUser: m.r === "user", isAssistant: m.r === "assistant" })) : [];
+    const pgMsgs = this.state.pgMsgs.map(m => ({ c: m.c, isUser: m.r === "user", isAssistant: m.r === "assistant" }));
+    const canSend = this.state.pgInput.trim().length > 0 && !this.state.pgThinking;
+    const sendStyle = "width:42px;height:42px;flex-shrink:0;border:none;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:" + (canSend ? "pointer" : "default") + ";background:var(--bd-primary,#18181b);color:var(--bd-primary-fg,#fafafa);opacity:" + (canSend ? "1" : ".4") + ";transition:opacity .15s;";
+
+    return {
+      accentColor: accent[0], accentFg: accent[1],
+      isConversations: this.state.screen === "conversations", isPlayground: this.state.screen === "playground", isConfig: this.state.screen === "config",
+      navConversations: () => this.go("conversations"), navPlayground: () => this.go("playground"), navConfig: () => this.go("config"),
+      tabConvStyle: this.tabStyle(this.state.screen === "conversations"), tabPgStyle: this.tabStyle(this.state.screen === "playground"), tabConfigStyle: this.tabStyle(this.state.screen === "config"),
+      totalCount: all.length, filters, rows, noRows: rows.length === 0,
+      search: this.state.search, onSearch: (e) => this.setState({ search: e.target.value }),
+      hasSel: !!sel, noSel: !sel, selFullId: sel ? sel.id : "", selCreated: sel ? sel.created : "", selCount: sel ? sel.msgs.length : 0,
+      selSourceLabel: sel ? (sel.source === "playground" ? "Playground" : "Cliente") : "", selDotColor: sel ? (sel.source === "playground" ? "#a1a1aa" : "#10b981") : "#10b981",
+      selMsgs, threadRef: this.threadRef,
+      pgMsgs, pgEmpty: this.state.pgMsgs.length === 0, pgThinking: this.state.pgThinking, pgInput: this.state.pgInput, pgListRef: this.pgListRef,
+      onPgInput: (e) => this.setState({ pgInput: e.target.value }), onPgKey: (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.sendText(this.state.pgInput); } },
+      sendPg: () => this.sendText(this.state.pgInput), newPg: () => this.setState({ pgMsgs: [], pgInput: "", pgThinking: false }), sendStyle,
+      suggestions: this.SUGGESTIONS.map(s => ({ text: s, on: () => this.sendText(s) })),
+      promptPreview: (this.state.prompt || this.DEFAULT_PROMPT).slice(0, 130) + "…",
+      activePrompt: this.state.prompt || this.DEFAULT_PROMPT, onPrompt: (e) => this.setState({ prompt: e.target.value }),
+      versions: this.VERSIONS.map(v => ({ label: v.label, isActive: v.isActive, canActivate: !v.isActive, preview: v.body }))
+    };
+  }
+}
+</script>
+</body>
+</html>

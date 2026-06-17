@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bulldog — Architecture Report</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg-2:#11161d; --panel:#161b22; --panel-2:#1c232c;
+    --border:#283039; --text:#e6edf3; --muted:#9aa7b4; --faint:#6b7785;
+    --accent:#4493f8; --accent-2:#7ee787; --warn:#e3b341; --danger:#f85149;
+    --radius:10px; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* Layout */
+  .layout{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
+  .sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-2);border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:16px}
+  .main{min-width:0;padding:40px 48px 120px;max-width:1100px}
+  @media(max-width:860px){
+    .layout{grid-template-columns:1fr}
+    .sidebar{position:fixed;z-index:50;width:84%;max-width:320px;transform:translateX(-105%);transition:transform .2s ease;box-shadow:0 0 40px rgba(0,0,0,.5)}
+    .sidebar.open{transform:none}
+    .main{padding:64px 20px 100px}
+    .menu-btn{display:inline-flex!important}
+  }
+
+  /* Sidebar */
+  .brand{font-weight:700;font-size:16px;letter-spacing:-.01em}
+  .brand small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
+  .search{position:relative}
+  .search input{width:100%;padding:9px 12px 9px 32px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none}
+  .search input:focus{border-color:var(--accent)}
+  .search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--faint)}
+  nav.toc{display:flex;flex-direction:column;gap:1px;overflow-y:auto}
+  nav.toc a{display:block;padding:5px 10px;border-radius:6px;color:var(--muted);font-size:13px;border-left:2px solid transparent}
+  nav.toc a:hover{background:var(--panel);color:var(--text);text-decoration:none}
+  nav.toc a.lvl3{padding-left:24px;font-size:12.5px}
+  nav.toc a.active{color:var(--text);background:var(--panel-2);border-left-color:var(--accent)}
+  nav.toc a.hidden{display:none}
+  .side-foot{margin-top:auto;color:var(--faint);font-size:11.5px;line-height:1.5;border-top:1px solid var(--border);padding-top:12px}
+
+  /* Top bar (mobile) */
+  .menu-btn{display:none;position:fixed;top:14px;left:14px;z-index:60;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;width:38px;height:38px;align-items:center;justify-content:center;cursor:pointer}
+
+  /* Headings & content */
+  .doc-head{margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+  .doc-head h1{margin:0 0 6px;font-size:30px;letter-spacing:-.02em}
+  .doc-head .sub{color:var(--muted);font-size:15px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .chip{background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:3px 11px;font-size:12px;color:var(--muted)}
+  .chip b{color:var(--text);font-weight:600}
+
+  section[data-section]{margin:0 0 14px;scroll-margin-top:24px}
+  section[data-section].hidden{display:none}
+  h2{font-size:21px;letter-spacing:-.01em;margin:38px 0 14px;padding-top:8px}
+  h3{font-size:16.5px;margin:26px 0 10px;color:var(--text)}
+  h2:first-child{margin-top:0}
+  p{margin:10px 0}
+  .lead{color:var(--muted)}
+  code{font-family:var(--mono);font-size:.88em;background:var(--panel-2);padding:1.5px 6px;border-radius:5px;border:1px solid var(--border)}
+  pre{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;overflow:auto}
+  pre code{background:none;border:none;padding:0}
+  ul,ol{padding-left:22px}
+  li{margin:3px 0}
+  hr{border:none;border-top:1px solid var(--border);margin:24px 0}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--panel);color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--panel)}
+  td code{white-space:nowrap}
+
+  /* Collapsibles */
+  details{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);margin:10px 0;overflow:hidden}
+  details>summary{cursor:pointer;padding:11px 14px;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+  details>summary::-webkit-details-marker{display:none}
+  details>summary::before{content:"▶";color:var(--faint);font-size:10px;transition:transform .15s}
+  details[open]>summary::before{transform:rotate(90deg)}
+  details>summary:hover{background:var(--panel-2)}
+  details .body{padding:0 14px 14px}
+  details .body>*:first-child{margin-top:6px}
+  details .body h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin:16px 0 6px;font-weight:600}
+  details.endpoint>summary{flex-wrap:wrap}
+  details.endpoint>summary code{font-weight:600;background:none;border:none;padding:0;color:var(--text)}
+  details.endpoint>summary .tag{margin-left:auto}
+  details.endpoint>summary .sum-note{flex-basis:100%;padding-left:18px;font-weight:400;color:var(--muted);font-size:12.5px}
+
+  /* Badges */
+  .badge{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.02em}
+  .m-get{background:rgba(68,147,248,.15);color:#79c0ff;border:1px solid rgba(68,147,248,.3)}
+  .m-post{background:rgba(126,231,135,.13);color:#7ee787;border:1px solid rgba(126,231,135,.3)}
+  .m-put,.m-patch{background:rgba(227,179,65,.13);color:#e3b341;border:1px solid rgba(227,179,65,.3)}
+  .m-delete{background:rgba(248,81,73,.13);color:#ff7b72;border:1px solid rgba(248,81,73,.3)}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:5px;background:var(--panel-2);border:1px solid var(--border);color:var(--muted)}
+  .tag.ok{color:var(--accent-2)} .tag.warn{color:var(--warn)} .tag.danger{color:var(--danger)}
+
+  /* Mermaid */
+  .mermaid{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;margin:16px 0;overflow-x:auto}
+  .mermaid svg{max-width:100%;height:auto}
+
+  /* Callouts */
+  .note{border-left:3px solid var(--accent);background:var(--panel);border-radius:0 8px 8px 0;padding:10px 14px;margin:14px 0;font-size:13.5px;color:var(--muted)}
+  .note.warn{border-left-color:var(--warn)}
+  .empty{color:var(--faint);font-style:italic}
+  mark{background:rgba(227,179,65,.35);color:#fff;border-radius:3px;padding:0 1px}
+  .no-results{color:var(--faint);padding:40px 0;text-align:center;display:none}
+</style>
+</head>
+<body>
+<button class="menu-btn" aria-label="Toggle menu" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">bulldog<small>Architecture Report</small></div>
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="search" placeholder="Search the report…" autocomplete="off">
+    </div>
+    <nav class="toc" id="toc"></nav>
+    <div class="side-foot">
+      Generated 2026-06-16<br>
+      <span id="stat"></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="doc-head">
+      <h1>bulldog — Architecture Report</h1>
+      <div class="sub">Next.js 16 · React 19 · Drizzle ORM · Postgres · next-auth v5 · Vercel AI SDK / OpenRouter · Tailwind v4 / shadcn</div>
+      <div class="chips">
+        <span class="chip"><b>4</b> tables</span>
+        <span class="chip"><b>9</b> pages</span>
+        <span class="chip"><b>4</b> HTTP routes</span>
+        <span class="chip"><b>3</b> server actions</span>
+        <span class="chip"><b>1</b> chat tool</span>
+        <span class="chip"><b>4</b> migrations</span>
+        <span class="chip">Next.js <b>16.2.9</b></span>
+      </div>
+    </header>
+
+    <div id="content">
+
+<section data-section>
+  <h2>Overview</h2>
+  <p class="lead"><b>bulldog</b> (a.k.a. "Bulldog Chat") is an embeddable AI chat widget plus a single-admin
+  control panel. Anonymous visitors chat from an iframe widget backed by an OpenRouter LLM; the admin edits
+  the assistant's behaviour (a versioned <i>System Prompt</i>), reviews persisted conversations, and browses
+  ingested phone-call records (Retell&nbsp;→&nbsp;n8n) with public recording playback.</p>
+
+  <h3>Stack</h3>
+  <ul>
+    <li><b>Framework</b> — Next.js <code>16.2.9</code> (App Router, React Server Components), React <code>19.2.4</code>. Node runtime on data routes.</li>
+    <li><b>Database</b> — Postgres (Neon) via <b>Drizzle ORM</b> <code>0.45</code> on the <code>postgres</code> (postgres.js) driver. Migrations with <code>drizzle-kit</code>.</li>
+    <li><b>Auth</b> — <b>next-auth v5</b> (beta) Credentials provider, JWT sessions, single hard-coded admin.</li>
+    <li><b>AI</b> — Vercel AI SDK (<code>ai</code> v6, <code>@ai-sdk/react</code>) with the <b>OpenRouter</b> provider; default model <code>anthropic/claude-haiku-4.5</code>.</li>
+    <li><b>UI</b> — Tailwind v4 (CSS-first), <b>shadcn</b> primitives over the unified <code>radix-ui</code> package, lucide icons, custom light/dark theme (no <code>next-themes</code>).</li>
+    <li><b>Infra</b> — Upstash Redis (rate limiting), n8n webhooks (inbound call ingestion + outbound availability lookup). Deployed on Vercel.</li>
+  </ul>
+
+  <h3>Key scripts</h3>
+  <table>
+    <thead><tr><th>Script</th><th>Command</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>dev</code></td><td><code>next dev</code></td><td>Local dev server</td></tr>
+      <tr><td><code>build</code></td><td><code>next build</code></td><td>Production build</td></tr>
+      <tr><td><code>start</code></td><td><code>next start</code></td><td>Serve production build</td></tr>
+      <tr><td><code>lint</code></td><td><code>eslint</code></td><td>Lint (eslint-config-next)</td></tr>
+      <tr><td><code>db:generate</code></td><td><code>drizzle-kit generate</code></td><td>Generate a migration from <code>lib/db/schema.ts</code></td></tr>
+      <tr><td><code>db:migrate</code></td><td><code>drizzle-kit migrate</code></td><td>Apply pending migrations</td></tr>
+    </tbody>
+  </table>
+  <div class="note warn">No test runner is configured (no <code>test</code> script, no Jest/Vitest/Playwright deps). Verification is manual.</div>
+
+  <h3>Folder map</h3>
+<pre><code>app/                          Next.js App Router (RSC-first)
+├─ (admin)/                   Admin panel — auth-gated route group (no URL segment)
+│  ├─ layout.tsx              Auth gate + top nav + theme toggle + sign-out
+│  └─ admin/
+│     ├─ (conversations)/     Split-pane: conversation list + [id] detail
+│     ├─ calls/               Retell/n8n calls list (page.tsx)
+│     ├─ config/              System-prompt version editor (page + actions.ts)
+│     └─ playground/          Internal assistant test chat (page + actions + client)
+├─ api/
+│  ├─ auth/[...nextauth]/     next-auth v5 handlers (GET/POST)
+│  ├─ chat/                   Public streaming chat endpoint (POST/OPTIONS)
+│  └─ webhooks/call-ended/    n8n call-ingestion webhook (POST, bearer)
+├─ audio-call/[id]/           Public recording player (30-day expiry)
+├─ login/                     Credentials sign-in
+├─ widget/                    Embeddable iframe chat widget (client island)
+└─ layout.tsx                 Root: fonts, globals.css, anti-FOUC theme script
+components/
+├─ admin/                     ConversationList
+├─ calls/                     CallsClient · CallDetailSheet · CallTranscript · InlineAudioPlayer
+├─ layout/                    AdminTopNav
+├─ theme/                     Module-store theme provider + toggle (no next-themes)
+└─ ui/                        shadcn primitives over radix-ui
+lib/
+├─ ai.ts                      OpenRouter model + DEFAULT_SYSTEM_PROMPT fallback
+├─ auth.ts                    next-auth config (edge-safe, Credentials, JWT)
+├─ cors.ts / rate-limit.ts    Widget origin allowlist · Upstash limiter
+├─ webhook-auth.ts            Bearer-secret verify for the n8n webhook
+├─ recording.ts / public-recording-link.ts   30-day audio expiry · public link builder
+├─ phone.ts                   US phone normalization
+├─ calls/                     map-call-ended-payload.ts
+├─ chat/                      persistence.ts · system.ts · tools/check-availability.ts
+├─ prompt/                    repository.ts (prompt_versions read/write)
+└─ db/                        schema.ts + migrations/ (Drizzle)
+hooks/                        use-mount-effect.ts
+proxy.ts                      Next.js middleware (auth allowlist; renamed from middleware.ts)
+next.config.ts                CSP frame-ancestors header for /widget</code></pre>
+</section>
+
+<section data-section>
+  <h2>Database Schema</h2>
+  <p class="lead">4 tables, 2 enums, exactly one foreign key. IDs are <code>text</code> generated app-side via
+  <code>crypto.randomUUID()</code> (<code>$defaultFn</code>) — there is no DB-side <code>gen_random_uuid()</code>.
+  Schema lives in <code>lib/db/schema.ts</code>; 4 migrations (<code>0000</code>→<code>0003</code>) in
+  <code>lib/db/migrations/</code>.</p>
+
+  <div class="note">Diagrams render via the Mermaid CDN — they need an internet connection to draw.</div>
+
+  <pre class="mermaid">
+erDiagram
+  CHAT_CONVERSATIONS ||--o{ CHAT_MESSAGES : has
+  CHAT_CONVERSATIONS {
+    text id PK
+    enum source "widget|playground"
+    timestamp created_at
+  }
+  CHAT_MESSAGES {
+    text id PK
+    text conversation_id FK
+    enum role "user|assistant"
+    text content
+    timestamp created_at
+  }
+  PROMPT_VERSIONS {
+    text id PK
+    text body
+    bool is_active
+    timestamp created_at
+  }
+  CALLS {
+    text id PK
+    text call_id
+    text agent_id
+    jsonb transcript
+    numeric call_cost
+  }
+  </pre>
+  <p class="lead"><code>PROMPT_VERSIONS</code> and <code>CALLS</code> are standalone — they have no FK edges.</p>
+
+  <h3>Enums</h3>
+  <table>
+    <thead><tr><th>DB type</th><th>JS export</th><th>Values</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td><code>chat_message_role</code></td><td><code>chatMessageRoleEnum</code></td><td><code>user</code>, <code>assistant</code></td><td><code>schema.ts:18</code></td></tr>
+      <tr><td><code>chat_conversation_source</code></td><td><code>chatConversationSourceEnum</code></td><td><code>widget</code>, <code>playground</code></td><td><code>schema.ts:26</code></td></tr>
+    </tbody>
+  </table>
+
+  <details open><summary>chat_conversations <span class="tag">schema.ts:31</span></summary><div class="body">
+    <p>A chat thread. <code>source</code> distinguishes real widget traffic from internal Playground tests (default <code>widget</code> — non-destructive backfill for legacy rows).</p>
+    <table><thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>text</td><td>no</td><td><code>crypto.randomUUID()</code> (app)</td><td>PK</td></tr>
+      <tr><td><code>source</code></td><td>chat_conversation_source</td><td>no</td><td><code>'widget'</code></td><td>added in migration 0002</td></tr>
+      <tr><td><code>created_at</code></td><td>timestamp</td><td>no</td><td><code>now()</code></td><td></td></tr>
+    </tbody></table>
+    <p>Relations: <code>messages: many(chatMessages)</code>. No indexes beyond PK.</p>
+  </div></details>
+
+  <details><summary>chat_messages <span class="tag">schema.ts:39</span></summary><div class="body">
+    <p>One message in a thread.</p>
+    <table><thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>text</td><td>no</td><td><code>crypto.randomUUID()</code> (app)</td><td>PK</td></tr>
+      <tr><td><code>conversation_id</code></td><td>text</td><td>no</td><td>—</td><td><b>FK → chat_conversations.id</b>, <code>ON DELETE CASCADE</code></td></tr>
+      <tr><td><code>role</code></td><td>chat_message_role</td><td>no</td><td>—</td><td><code>user</code> / <code>assistant</code></td></tr>
+      <tr><td><code>content</code></td><td>text</td><td>no</td><td>—</td><td></td></tr>
+      <tr><td><code>created_at</code></td><td>timestamp</td><td>no</td><td><code>now()</code></td><td></td></tr>
+    </tbody></table>
+    <p><b>Index:</b> <code>chat_messages_conversation_created_idx</code> btree on (<code>conversation_id</code>, <code>created_at</code>) — drives ordered history reload.</p>
+  </div></details>
+
+  <details><summary>prompt_versions <span class="tag">schema.ts:63</span></summary><div class="body">
+    <p>Append-only, versioned System Prompt. Every save inserts a row; none is ever deleted. Exactly one row is active (the body fed to the model). ADR-0001.</p>
+    <table><thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>text</td><td>no</td><td><code>crypto.randomUUID()</code> (app)</td><td>PK</td></tr>
+      <tr><td><code>body</code></td><td>text</td><td>no</td><td>—</td><td>the prompt text</td></tr>
+      <tr><td><code>is_active</code></td><td>boolean</td><td>no</td><td><code>false</code></td><td></td></tr>
+      <tr><td><code>created_at</code></td><td>timestamp</td><td>no</td><td><code>now()</code></td><td></td></tr>
+    </tbody></table>
+    <p><b>Indexes:</b> <code>prompt_versions_active_unique</code> — <b>UNIQUE partial</b> on (<code>is_active</code>) <code>WHERE is_active</code> (enforces ≤1 active version); <code>prompt_versions_created_idx</code> btree on (<code>created_at</code>) for history listing.</p>
+  </div></details>
+
+  <details><summary>calls <span class="tag">schema.ts:83</span></summary><div class="body">
+    <p>Retell call records ingested from the n8n webhook. <code>agent_id</code> is metadata only — it does not resolve to any company/agent table.</p>
+    <table><thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>text</td><td>no</td><td><code>crypto.randomUUID()</code> (app)</td><td>PK</td></tr>
+      <tr><td><code>call_id</code></td><td>text</td><td>no</td><td>—</td><td>Retell ID · part of unique key</td></tr>
+      <tr><td><code>agent_id</code></td><td>text</td><td>no</td><td>—</td><td>metadata · part of unique key</td></tr>
+      <tr><td><code>customer_name</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>customer_phone</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>customer_address</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>customer_city</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>customer_zipcode</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>service</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>summary</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>call_date</code></td><td>text</td><td>yes</td><td>—</td><td>free-form ISO string</td></tr>
+      <tr><td><code>event</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>retell_event</code></td><td>text</td><td>yes</td><td>—</td><td>set to <code>call_ended</code> on update</td></tr>
+      <tr><td><code>call_status</code></td><td>text</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>disconnection_reason</code></td><td>text</td><td>yes</td><td>—</td><td>display metadata</td></tr>
+      <tr><td><code>start_timestamp</code></td><td>bigint (number)</td><td>yes</td><td>—</td><td>epoch ms</td></tr>
+      <tr><td><code>end_timestamp</code></td><td>bigint (number)</td><td>yes</td><td>—</td><td>epoch ms</td></tr>
+      <tr><td><code>duration_ms</code></td><td>integer</td><td>yes</td><td>—</td><td></td></tr>
+      <tr><td><code>audio_url</code></td><td>text</td><td>yes</td><td>—</td><td>recording URL</td></tr>
+      <tr><td><code>call_cost</code></td><td>numeric(10,6)</td><td>yes</td><td>—</td><td>USD</td></tr>
+      <tr><td><code>transcript</code></td><td>jsonb</td><td>yes</td><td>—</td><td><code>TranscriptTurn[]</code> = <code>{ role:"agent"|"user", content:string }[]</code></td></tr>
+      <tr><td><code>created_at</code></td><td>timestamp</td><td>no</td><td><code>now()</code></td><td></td></tr>
+      <tr><td><code>updated_at</code></td><td>timestamp</td><td>no</td><td><code>now()</code></td><td>bumped on every upsert</td></tr>
+    </tbody></table>
+    <p><b>Index:</b> <code>calls_call_id_agent_id_idx</code> — <b>UNIQUE</b> btree on (<code>call_id</code>, <code>agent_id</code>); the idempotent upsert key for webhook retries.</p>
+  </div></details>
+</section>
+
+<section data-section>
+  <h2>API Endpoints</h2>
+  <p class="lead">4 HTTP route handlers plus 3 server actions and 1 LLM tool. No zod — handlers do manual type-guarding.
+  Three distinct auth strategies coexist: <span class="tag warn">session</span> (JWT cookie) for the admin,
+  <span class="tag ok">public</span> origin-allowlist + IP rate-limit for chat, and a
+  <span class="tag danger">bearer</span> shared secret for the n8n webhook.</p>
+
+  <h3>Chat</h3>
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-post">POST</span><code>/api/chat</code>
+      <span class="tag ok">public</span>
+      <span class="sum-note">Streaming chatbot: persists user msg, rebuilds history, streams the LLM reply · <code>route.ts:53</code></span>
+    </summary>
+    <div class="body">
+      <p>Public widget endpoint (Node runtime, <code>maxDuration=30</code>). Gated by CORS origin allowlist (403) then Upstash rate limit (20 req / 10&nbsp;min / IP → 429). A missing <code>Origin</code> header is allowed.</p>
+      <h4>Request body <span class="tag">JSON object</span></h4>
+      <table><thead><tr><th>Field</th><th>Type</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>conversationId</code></td><td>string</td><td>no</td><td>omit/null ⇒ new conversation; unknown id ⇒ 404</td></tr>
+        <tr><td><code>source</code></td><td>"widget" | "playground"</td><td>no</td><td>applied only when creating a thread; client-supplied / falsifiable (ADR-0002)</td></tr>
+        <tr><td><code>text</code></td><td>string</td><td>cond</td><td>plain message text…</td></tr>
+        <tr><td><code>message.parts</code></td><td>{ type:"text", text:string }[]</td><td>cond</td><td>…or AI-SDK UIMessage parts (concatenated). One of the two is required.</td></tr>
+      </tbody></table>
+      <h4>Response</h4>
+      <pre><code>// AI SDK UI-message data stream (SSE-style), via result.toUIMessageStreamResponse()
+// Response header: X-Conversation-Id: &lt;id&gt;  (exposed cross-origin)</code></pre>
+      <p>Model: OpenRouter <code>OPENROUTER_MODEL</code> (default <code>anthropic/claude-haiku-4.5</code>). System prompt read fresh per request from <code>prompt_versions</code>. One tool wired in: <code>check_availability</code>; multi-step via <code>stopWhen: stepCountIs(5)</code>. <code>consumeStream()</code> keeps generation alive on client disconnect; <code>onFinish</code> persists the assistant text.</p>
+      <p>Status: <code>200</code> stream · <code>400</code> bad JSON / shape / empty text · <code>403</code> origin · <code>404</code> conversation not found · <code>429</code> rate limit · <code>500</code> if <code>OPENROUTER_API_KEY</code> unset.</p>
+    </div>
+  </details>
+
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-post">OPTIONS</span><code>/api/chat</code>
+      <span class="tag ok">public</span>
+      <span class="sum-note">CORS preflight for the cross-origin embed · <code>route.ts:24</code></span>
+    </summary>
+    <div class="body">
+      <p>Returns <code>403</code> (empty) if the origin is not allowed; otherwise <code>204</code> with CORS headers. Advertises <code>Access-Control-Allow-Methods: POST, OPTIONS</code> and allowed header <code>Content-Type</code>.</p>
+    </div>
+  </details>
+
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-put">TOOL</span><code>check_availability</code>
+      <span class="tag">LLM tool</span>
+      <span class="sum-note">Read-only appointment-slot lookup the model may call · <code>lib/chat/tools/check-availability.ts:69</code></span>
+    </summary>
+    <div class="body">
+      <p>Not an HTTP route — the single tool exposed to the model in the chat route. POSTs to <code>AVAILABILITY_WEBHOOK_URL</code> (n8n), 10s abort timeout. Reads availability; never books.</p>
+      <h4>Input</h4>
+      <table><thead><tr><th>Field</th><th>Type</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody><tr><td><code>date</code></td><td>string</td><td>yes</td><td>ISO-8601 with <code>Z</code> suffix</td></tr></tbody></table>
+      <h4>Returns (to the model)</h4>
+      <pre><code>{ ok: true, zona: "America/Los_Angeles",
+  franjas: { id: string, label: string, cupos: number }[] }
+| { ok: false, reason: "unavailable" | "bad_response" }</code></pre>
+    </div>
+  </details>
+
+  <h3>Webhooks / Calls</h3>
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-post">POST</span><code>/api/webhooks/call-ended</code>
+      <span class="tag danger">bearer</span>
+      <span class="sum-note">Idempotent upsert of an ended call from Retell → n8n · <code>route.ts:12</code></span>
+    </summary>
+    <div class="body">
+      <p>Single ingestion webhook (ADR-006). Auth via <code>Authorization: Bearer &lt;N8N_WEBHOOK_SECRET&gt;</code> (constant-time compare). Upserts by <code>(call_id, agent_id)</code>; partial-retry safe (<code>mapped ?? existing</code>; won't overwrite populated name/phone/summary).</p>
+      <h4>Request body <span class="tag">n8n-normalized flat object</span></h4>
+      <table><thead><tr><th>Field</th><th>Type</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>event</code></td><td>string</td><td>yes</td><td>must equal <code>"call_ended"</code> — else short-circuits 204</td></tr>
+        <tr><td><code>call_id</code></td><td>string</td><td>yes</td><td>missing → 400</td></tr>
+        <tr><td><code>agent_id</code></td><td>string</td><td>yes</td><td>missing → 400</td></tr>
+        <tr><td><code>call_status</code></td><td>string</td><td>no</td><td>default <code>"ended"</code></td></tr>
+        <tr><td><code>start_timestamp</code> / <code>end_timestamp</code></td><td>number</td><td>no</td><td>epoch ms; start derives <code>call_date</code></td></tr>
+        <tr><td><code>duration_ms</code></td><td>number</td><td>no</td><td></td></tr>
+        <tr><td><code>recording_url</code> ‖ <code>audio_url</code></td><td>string</td><td>no</td><td></td></tr>
+        <tr><td><code>call_cost</code></td><td>number</td><td>no</td><td>USD → decimal</td></tr>
+        <tr><td><code>name</code>, <code>phone</code>‖<code>from_number</code>, <code>address</code>, <code>city</code>, <code>zipcode</code>, <code>service</code>, <code>summary</code></td><td>string</td><td>no</td><td>customer fields</td></tr>
+        <tr><td><code>transcription_object</code></td><td>{ role:"agent"|"user", content:string }[]</td><td>no</td><td>empty-content turns dropped</td></tr>
+      </tbody></table>
+      <h4>Response</h4>
+      <pre><code>{ id: string, url: string }   // url = public /audio-call/&lt;id&gt; link</code></pre>
+      <p>Status: <code>200</code> upserted · <code>204</code> non-<code>call_ended</code> event · <code>400</code> bad shape / missing ids · <code>401</code> missing/invalid bearer · <code>500</code> <code>N8N_WEBHOOK_SECRET</code> unset.</p>
+    </div>
+  </details>
+
+  <h3>Auth</h3>
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-get">GET</span><span class="badge m-post">POST</span><code>/api/auth/[...nextauth]</code>
+      <span class="tag warn">auth</span>
+      <span class="sum-note">next-auth v5 catch-all: sign-in / sign-out / session / CSRF · <code>route.ts:3</code></span>
+    </summary>
+    <div class="body">
+      <p>Re-exports <code>{ GET, POST } = handlers</code> from <code>lib/auth.ts</code>. Credentials provider only (email + password vs <code>AUTH_EMAIL</code>/<code>AUTH_PASSWORD</code>), JWT session, custom sign-in page at <code>/login</code>. No custom body parsing in this repo — dispatched internally by next-auth.</p>
+    </div>
+  </details>
+
+  <h3>Server Actions — Config <span class="tag">"use server" · config/actions.ts</span></h3>
+  <p class="lead">Each action re-checks <code>auth()</code> independently (no session → <code>redirect("/login")</code>) and always redirects rather than returning.</p>
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-post">ACTION</span><code>savePrompt(formData)</code>
+      <span class="tag warn">auth</span>
+      <span class="sum-note">Save a new active System Prompt version · <code>config/actions.ts:14</code></span>
+    </summary>
+    <div class="body">
+      <h4>Args</h4>
+      <table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody><tr><td><code>body</code></td><td>string (FormData)</td><td>blank → <code>redirect(?status=empty)</code></td></tr></tbody></table>
+      <p>Calls <code>saveNewActiveVersion(body)</code> → <code>revalidatePath("/admin/config")</code> → <code>redirect(?status=saved|nochange)</code> depending on whether a new version was created.</p>
+    </div>
+  </details>
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-post">ACTION</span><code>activatePrompt(formData)</code>
+      <span class="tag warn">auth</span>
+      <span class="sum-note">Activate an existing prompt version · <code>config/actions.ts:28</code></span>
+    </summary>
+    <div class="body">
+      <h4>Args</h4>
+      <table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody><tr><td><code>id</code></td><td>string (FormData)</td><td>version id to activate</td></tr></tbody></table>
+      <p>If <code>id</code> present → <code>activateVersion(id)</code> + <code>revalidatePath("/admin/config")</code>, then <code>redirect(?status=activated)</code>.</p>
+    </div>
+  </details>
+
+  <h3>Server Actions — Playground <span class="tag">"use server" · playground/actions.ts</span></h3>
+  <details class="endpoint">
+    <summary>
+      <span class="badge m-post">ACTION</span><code>loadPlaygroundThread(id)</code>
+      <span class="tag warn">auth</span>
+      <span class="sum-note">Resume-on-reload: fetch the in-progress Playground thread from DB · <code>playground/actions.ts:9</code></span>
+    </summary>
+    <div class="body">
+      <h4>Args</h4>
+      <table><thead><tr><th>Param</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody><tr><td><code>id</code></td><td>string</td><td>conversationId from client localStorage</td></tr></tbody></table>
+      <p>No session → returns <code>[]</code> (does not redirect). Otherwise <code>loadHistory(id)</code>.</p>
+      <h4>Returns</h4>
+      <pre><code>{ role: "user" | "assistant", content: string }[]</code></pre>
+    </div>
+  </details>
+</section>
+
+<section data-section>
+  <h2>UI</h2>
+  <p class="lead">RSC-first: every page and all three layouts are async Server Components doing auth + Drizzle queries
+  directly. Interactivity is isolated to <code>"use client"</code> leaf islands. Route groups <code>(admin)</code>
+  and <code>(conversations)</code> are organizational only — they do not appear in URLs.</p>
+
+  <h3>Route / page tree</h3>
+<pre><code>/                         app/page.tsx                         Server  → redirects to /admin
+/login                    app/login/page.tsx                   Server  Credentials sign-in (inline server action)
+/widget                   app/widget/page.tsx                  Server shell → ChatWidgetClient (public iframe)
+/audio-call/[id]          app/audio-call/[id]/page.tsx         Server  Public recording player (30-day expiry)
+/admin                    (admin)/admin/(conversations)/page   Server  Empty-state of the split view
+/admin/[id]               (admin)/admin/(conversations)/[id]   Server  Conversation detail (message thread)
+/admin/calls              (admin)/admin/calls/page.tsx         Server  Calls list (ilike search + pagination)
+/admin/config             (admin)/admin/config/page.tsx        Server  System-prompt version editor
+/admin/playground         (admin)/admin/playground/page.tsx    Server → PlaygroundClient test chat</code></pre>
+
+  <h3>Layouts</h3>
+  <table>
+    <thead><tr><th>Layout</th><th>File</th><th>Responsibilities</th></tr></thead>
+    <tbody>
+      <tr><td>Root</td><td><code>app/layout.tsx</code></td><td>html/body; Geist + Geist Mono fonts; <code>globals.css</code>; blocking anti-FOUC <code>themeInitScript</code>; <code>suppressHydrationWarning</code>. No React theme provider.</td></tr>
+      <tr><td><code>(admin)</code></td><td><code>app/(admin)/layout.tsx</code></td><td><b>Auth gate</b> (<code>await auth()</code> → <code>redirect("/login")</code>). Header: brand, <code>AdminTopNav</code>, <code>ThemeToggle</code>, user-initial avatar, sign-out form (inline <code>signOut</code> action).</td></tr>
+      <tr><td><code>(conversations)</code></td><td><code>…/(conversations)/layout.tsx</code></td><td>Re-checks auth; <code>listConversationsWithTail()</code>; two-pane split — left <code>ConversationList</code> (368px), right <code>{children}</code>.</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><code>calls</code>, <code>config</code> and <code>playground</code> sit under <code>(admin)</code> but outside <code>(conversations)</code> — they get the admin header but a full-width body (no conversation sidebar).</div>
+
+  <h3>Main components</h3>
+  <table>
+    <thead><tr><th>Component</th><th>Location</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>ConversationList</code></td><td>components/admin/</td><td>Client. Sidebar with client-side search + source filter tabs (all / widget / playground); active-row via <code>usePathname</code>.</td></tr>
+      <tr><td><code>CallsClient</code></td><td>components/calls/</td><td>Client. Calls table, debounced URL search, pagination; opens <code>CallDetailSheet</code>. Exports shared display helpers (<code>statusBadge</code>, <code>formatDuration</code>…).</td></tr>
+      <tr><td><code>CallDetailSheet</code></td><td>components/calls/</td><td>Client. Radix Dialog slide-over with Call / Transcript tabs, copyable IDs, inline audio + download.</td></tr>
+      <tr><td><code>CallTranscript</code></td><td>components/calls/</td><td>Server-compatible. Renders agent/customer transcript turns.</td></tr>
+      <tr><td><code>InlineAudioPlayer</code></td><td>components/calls/</td><td>Client. Custom HTML5 player: play/pause, pointer+keyboard scrubbing, speed dropdown, <code>Infinity</code>-duration workaround.</td></tr>
+      <tr><td><code>AdminTopNav</code></td><td>components/layout/</td><td>Client. Top nav tabs (Conversaciones / Calls / Playground / Configuración); active via <code>usePathname</code> prefix.</td></tr>
+      <tr><td><code>ThemeToggle</code></td><td>components/theme/</td><td>Client. Sun/Moon button → <code>useTheme().toggleTheme</code>; CSS-only icon cross-fade.</td></tr>
+      <tr><td><code>theme-provider</code></td><td>components/theme/</td><td>Client <b>module store</b> (not a Context provider). Exports <code>useTheme</code>, <code>setTheme</code>, <code>themeInitScript</code>.</td></tr>
+      <tr><td><code>PlaygroundClient</code></td><td>admin/playground/</td><td>Client island. AI-SDK <code>useChat</code> test chat; localStorage-resumed thread (separate key from widget).</td></tr>
+      <tr><td><code>ChatWidgetClient</code></td><td>app/widget/</td><td>Client island. Iframe widget; <code>useChat</code> → <code>/api/chat</code>; <code>postMessage</code> close to parent.</td></tr>
+      <tr><td><code>components/ui/*</code></td><td>components/ui/</td><td>shadcn primitives over <code>radix-ui</code>: badge, button (CVA + <code>Slot</code>), card, dropdown-menu, input, label, sheet (Dialog), table, tabs, textarea.</td></tr>
+      <tr><td><code>useMountEffect</code></td><td>hooks/</td><td>Mount-only <code>useEffect</code> wrapper.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Rendering &amp; theme notes</h3>
+  <ul>
+    <li><b>Styling</b> — Tailwind v4 CSS-first (<code>@import "tailwindcss"</code> + <code>tw-animate-css</code> + <code>shadcn/tailwind.css</code>); tokens in <code>@theme inline</code>; dark via <code>@custom-variant dark</code>; neutral base with an <b>amber</b> primary; <code>--radius: 0.625rem</code>. shadcn style <code>radix-nova</code>, RSC on, lucide icons.</li>
+    <li><b>Theme system</b> — deliberately <b>no <code>next-themes</code> and no React Context</b>. <code>theme-provider.tsx</code> is an external module store read through <code>useSyncExternalStore</code>: state lives in module scope, <code>subscribe()</code> listens to <code>matchMedia</code> + <code>storage</code> (cross-tab); <code>setTheme()</code> writes <code>localStorage</code>, toggles <code>.dark</code> + <code>colorScheme</code> on <code>&lt;html&gt;</code>. A blocking <code>themeInitScript</code> IIFE in the root body sets <code>.dark</code> pre-hydration (anti-FOUC).</li>
+  </ul>
+</section>
+
+<section data-section>
+  <h2>Auth, Roles &amp; Middleware</h2>
+
+  <h3>Mechanism</h3>
+  <ul>
+    <li><b>next-auth v5</b> (beta), <b>Credentials</b> provider only, <b>JWT</b> sessions (<code>session.strategy:"jwt"</code>, <code>lib/auth.ts:39</code>). No DB adapter, no OAuth.</li>
+    <li><code>authorize</code> compares submitted email/password to <code>AUTH_EMAIL</code>/<code>AUTH_PASSWORD</code> (constant-time <code>safeEq</code>) and returns a single static identity <code>{ id:"admin", email }</code> or <code>null</code> (<code>lib/auth.ts:25-35</code>).</li>
+    <li><b>Edge-safe</b> — <code>lib/auth.ts</code> avoids <code>node:crypto</code> (uses <code>TextEncoder</code>-based compare) so the same module is importable by both the edge middleware (<code>proxy.ts</code>) and server. No separate <code>auth.config.ts</code> split. (Contrast: <code>lib/webhook-auth.ts</code> uses <code>node:crypto.timingSafeEqual</code> — it only runs in a Node route.)</li>
+    <li>Login at <code>/login</code>; sign-out via inline <code>signOut</code> action in <code>(admin)/layout.tsx:45</code>.</li>
+  </ul>
+
+  <h3>Role matrix</h3>
+  <table>
+    <thead><tr><th>Role</th><th>Identified by</th><th>Can do</th></tr></thead>
+    <tbody>
+      <tr><td>Anonymous / widget visitor</td><td>No session (public paths only)</td><td>Use the chat widget (<code>/widget</code>, <code>/api/chat</code>); view a public recording (<code>/audio-call/[id]</code>). Cannot reach <code>/admin</code>.</td></tr>
+      <tr><td>Admin (single user)</td><td>Valid JWT from <code>AUTH_EMAIL</code>/<code>AUTH_PASSWORD</code></td><td>Everything under <code>(admin)</code>: view conversations &amp; calls, edit/version the System Prompt, use the Playground.</td></tr>
+      <tr><td>n8n (machine, not a session role)</td><td>Bearer <code>N8N_WEBHOOK_SECRET</code></td><td>POST to <code>/api/webhooks/call-ended</code> to ingest calls. Orthogonal to next-auth.</td></tr>
+    </tbody>
+  </table>
+  <div class="note">No roles table and no permission flags — "roles" are effectively just authenticated-admin vs anonymous, plus the webhook machine identity.</div>
+
+  <h3>Middleware &amp; guards</h3>
+  <ul>
+    <li><b>proxy.ts</b> (Next.js 16 middleware, renamed from <code>middleware.ts</code>) — <code>export const proxy = auth(...)</code>. Allow-lists <code>/login</code>, <code>/widget</code>, <code>/audio-call</code>, <code>/api/chat</code>, <code>/api/auth</code>, <code>/api/webhooks</code>; everything else requires a session (<code>!req.auth?.user</code> → redirect <code>/login</code>). Matcher excludes <code>_next/*</code>, <code>favicon.ico</code>, <code>widget.v1.js</code>, <code>.svg</code>. The <code>/admin</code> gate is thus enforced <b>twice</b> (middleware + layout).</li>
+    <li><b>CSP / clickjacking</b> — <code>next.config.ts</code> sets <code>Content-Security-Policy: frame-ancestors &lt;ALLOWED_ORIGINS&gt;</code> <b>only on <code>/widget</code></b> (fallback <code>'none'</code>). Intentionally <b>no</b> <code>X-Frame-Options: DENY</code> (would break the embed). <code>frame-ancestors</code> is the primary embed gate.</li>
+    <li><b>CORS</b> (<code>lib/cors.ts</code>) — origin allowlist = <code>ALLOWED_ORIGINS</code> + <code>AUTH_URL</code> self-origin; missing <code>Origin</code> is allowed. Enforced on <code>/api/chat</code> only (403). Exposes <code>X-Conversation-Id</code>. Defense-in-depth behind <code>frame-ancestors</code>.</li>
+    <li><b>Webhook bearer</b> (<code>lib/webhook-auth.ts</code>) — <code>verifyN8nSecret</code>: 500 if secret unset, 401 if missing/invalid, constant-time compare.</li>
+    <li><b>Rate limit</b> (<code>lib/rate-limit.ts</code>) — Upstash Redis sliding window <b>20 req / 10 min / IP</b> (prefix <code>bulldog-chat</code>), keyed off first <code>x-forwarded-for</code> hop. <b>Degrades open</b> (allows all) if Upstash env is absent.</li>
+  </ul>
+  <div class="note warn">Two accepted soft-spots: (1) chat <code>source</code> is client-supplied and falsifiable (degrades listing reliability, not security — ADR-0002); (2) rate limiting silently no-ops if Upstash env vars are unset.</div>
+</section>
+
+<section data-section>
+  <h2>Jobs &amp; Integrations</h2>
+
+  <h3>Background jobs</h3>
+  <p><span class="empty">none found</span> — no <code>vercel.json</code> cron, no <code>node-cron</code>/<code>bullmq</code>/queue. All async work is push-based: the n8n call-ended webhook is event-triggered, and <code>result.consumeStream()</code> in the chat route is an in-request continuation (keeps the LLM stream + persistence alive after client disconnect), not a scheduled job.</p>
+
+  <h3>External services</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Used for</th><th>Client / SDK</th><th>Entry</th></tr></thead>
+    <tbody>
+      <tr><td>OpenRouter (LLM)</td><td>Chat completions, streaming, tool calls</td><td><code>@openrouter/ai-sdk-provider</code> + Vercel AI SDK <code>streamText</code></td><td><code>lib/ai.ts</code> → <code>api/chat/route.ts</code></td></tr>
+      <tr><td>Postgres / Neon</td><td>All persistence (conversations, messages, prompt versions, calls)</td><td>Drizzle ORM on <code>postgres.js</code> (<code>prepare:false</code>)</td><td><code>lib/db/</code></td></tr>
+      <tr><td>Upstash Redis</td><td>Per-IP rate limiting of public chat</td><td><code>@upstash/ratelimit</code> + <code>@upstash/redis</code></td><td><code>lib/rate-limit.ts</code></td></tr>
+      <tr><td>n8n — inbound</td><td>Ingest ended-call data; return public recording link</td><td>Plain handler + bearer secret</td><td><code>api/webhooks/call-ended/route.ts</code></td></tr>
+      <tr><td>n8n — outbound</td><td><code>check_availability</code> tool reads appointment slots (read-only)</td><td>AI SDK <code>tool()</code> + <code>fetch</code> (10s timeout)</td><td><code>lib/chat/tools/check-availability.ts</code></td></tr>
+      <tr><td>Retell (upstream)</td><td>Voice provider; payload flows Retell → n8n → app</td><td>— not called directly</td><td>referenced in webhook ADR comments</td></tr>
+      <tr><td>Recording / audio</td><td>30-day expiry rule; build <code>/audio-call/[id]</code> links</td><td>Pure helpers (no external client)</td><td><code>lib/recording.ts</code>, <code>lib/public-recording-link.ts</code></td></tr>
+    </tbody>
+  </table>
+  <div class="note">System Prompt is stored versioned in the DB (<code>prompt_versions</code>, via <code>lib/prompt/repository.ts</code>), read fresh per chat request, with <code>DEFAULT_SYSTEM_PROMPT</code> (<code>lib/ai.ts:20</code>) as fallback. The legacy <code>CHAT_SYSTEM_PROMPT</code> env var is retired (ADR-0001).</div>
+
+  <h3>Environment variables</h3>
+  <p class="lead">Names &amp; purpose only — never values.</p>
+  <table>
+    <thead><tr><th>Name</th><th>Purpose</th><th>Required</th></tr></thead>
+    <tbody>
+      <tr><td><code>DATABASE_URL</code></td><td>Postgres/Neon connection string</td><td>yes</td></tr>
+      <tr><td><code>AUTH_SECRET</code></td><td>next-auth JWT signing/encryption secret</td><td>yes</td></tr>
+      <tr><td><code>AUTH_URL</code></td><td>Canonical app URL; CORS self-origin + base for recording links</td><td>yes (prod)</td></tr>
+      <tr><td><code>AUTH_EMAIL</code></td><td>Single admin login email</td><td>yes</td></tr>
+      <tr><td><code>AUTH_PASSWORD</code></td><td>Single admin login password</td><td>yes</td></tr>
+      <tr><td><code>OPENROUTER_API_KEY</code></td><td>OpenRouter API key for LLM calls</td><td>yes (prod; calls fail/500 if unset)</td></tr>
+      <tr><td><code>OPENROUTER_MODEL</code></td><td>Override LLM model (default <code>anthropic/claude-haiku-4.5</code>)</td><td>no</td></tr>
+      <tr><td><code>ALLOWED_ORIGINS</code></td><td>Comma-separated origins allowed to embed <code>/widget</code> (CSP <code>frame-ancestors</code> + CORS allowlist)</td><td>yes (prod)</td></tr>
+      <tr><td><code>UPSTASH_REDIS_REST_URL</code></td><td>Upstash Redis REST URL for rate limiting</td><td>no (degrades to no-limit)</td></tr>
+      <tr><td><code>UPSTASH_REDIS_REST_TOKEN</code></td><td>Upstash Redis REST token</td><td>no (degrades to no-limit)</td></tr>
+      <tr><td><code>AVAILABILITY_WEBHOOK_URL</code></td><td>n8n webhook for the <code>check_availability</code> tool (has default)</td><td>no</td></tr>
+      <tr><td><code>BUSINESS_TIMEZONE</code></td><td>IANA business timezone for availability/date reasoning</td><td>no (default in code)</td></tr>
+      <tr><td><code>N8N_WEBHOOK_SECRET</code></td><td>Shared bearer secret n8n sends to <code>/api/webhooks/call-ended</code></td><td>yes (route 500s if unset)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+    </div>
+    <div class="no-results" id="noResults">No sections match your search.</div>
+  </main>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({startOnLoad:true,theme:'dark',securityLevel:'loose',themeVariables:{fontFamily:'ui-monospace,monospace',fontSize:'13px'}});
+</script>
+<script>
+(function(){
+  const content=document.getElementById('content');
+  const toc=document.getElementById('toc');
+  const slug=t=>t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
+  const used={};
+  // Build TOC from h2/h3
+  const heads=[...content.querySelectorAll('h2,h3')];
+  heads.forEach(h=>{
+    if(!h.id){let s=slug(h.textContent)||'sec';if(used[s])s+='-'+(++used[s]);else used[s]=1;h.id=s;}
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent;
+    a.className=h.tagName==='H3'?'lvl3':'';
+    a.dataset.target=h.id;
+    toc.appendChild(a);
+  });
+  document.getElementById('stat').textContent=
+    content.querySelectorAll('section[data-section]').length+' sections · '+
+    content.querySelectorAll('table').length+' tables · '+
+    content.querySelectorAll('.mermaid').length+' diagrams';
+
+  // Scrollspy
+  const links=[...toc.querySelectorAll('a')];
+  const byId=Object.fromEntries(links.map(a=>[a.dataset.target,a]));
+  const obs=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));byId[e.target.id]&&byId[e.target.id].classList.add('active');}});
+  },{rootMargin:'-10% 0px -80% 0px',threshold:0});
+  heads.forEach(h=>obs.observe(h));
+  // Close mobile sidebar on nav
+  links.forEach(a=>a.addEventListener('click',()=>document.querySelector('.sidebar').classList.remove('open')));
+
+  // Search: filter sections + TOC, auto-open details
+  const sections=[...content.querySelectorAll('section[data-section]')];
+  const noRes=document.getElementById('noResults');
+  const q=document.getElementById('q');
+  q.addEventListener('input',()=>{
+    const term=q.value.trim().toLowerCase();
+    let shown=0;
+    sections.forEach(sec=>{
+      const hit=!term||sec.textContent.toLowerCase().includes(term);
+      sec.classList.toggle('hidden',!hit);
+      if(hit)shown++;
+      if(term&&hit)sec.querySelectorAll('details').forEach(d=>d.open=true);
+    });
+    const visibleIds=new Set(sections.filter(s=>!s.classList.contains('hidden')).flatMap(s=>[...s.querySelectorAll('h2,h3')].map(h=>h.id)));
+    links.forEach(a=>a.classList.toggle('hidden',term&&!visibleIds.has(a.dataset.target)));
+    noRes.style.display=shown?'none':'block';
+  });
+  q.addEventListener('keydown',e=>{if(e.key==='Escape'){q.value='';q.dispatchEvent(new Event('input'));}});
+})();
+</script>
+</body>
+</html>

@@ -7,6 +7,12 @@
       "skillPath": "skills/apply-prd/SKILL.md",
       "computedHash": "f2ce9afb11352a77b02049d0e4dcfe4a6e25e20dcd24fe741e83e82eaeafcc66"
     },
+    "arch-report": {
+      "source": "arturxdev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/arch-report/SKILL.md",
+      "computedHash": "9694182b98957e1d92bdc3b1b51a4db3eb5974de5c98d909c0f88a8f6cff7f04"
+    },
     "drizzle-migration": {
       "source": "arturxdev/skills",
       "sourceType": "github",
