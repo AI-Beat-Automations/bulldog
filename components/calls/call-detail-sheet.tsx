@@ -96,7 +96,7 @@ export function CallDetailSheet({
         if (!o) onClose();
       }}
     >
-      <SheetContent className="w-full gap-0 p-0 sm:max-w-[560px]">
+      <SheetContent className="gap-0 p-0 data-[side=right]:w-full sm:max-w-[560px]">
         {call ? (
           <>
             <SheetHeader className="border-b border-border p-6">
@@ -151,7 +151,7 @@ export function CallDetailSheet({
               </TabsList>
 
               <TabsContent value="call" className="pt-5">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                   <DetailField
                     label="Customer"
                     value={call.customerName ?? "—"}
@@ -185,7 +185,7 @@ export function CallDetailSheet({
                   <DetailField
                     label="Summary"
                     value={call.summary ?? "—"}
-                    className="col-span-2"
+                    className="sm:col-span-2"
                   />
                 </div>
               </TabsContent>
