@@ -1,24 +1,35 @@
-import { stepCountIs, streamText } from "ai";
+import {
+  stepCountIs,
+  streamText,
+  type JSONValue,
+  type ModelMessage,
+} from "ai";
 
 import { assertAiConfigured, chatModel } from "@/lib/ai";
 import {
   ConversationNotFoundError,
-  loadHistory,
+  loadModelContext,
   resolveConversation,
   saveMessage,
+  saveToolMessage,
   type ConversationSource,
 } from "@/lib/chat/persistence";
 import { buildSystemPrompt } from "@/lib/chat/system";
 import {
-  CHECK_AVAILABILITY_TOOL,
-  checkAvailabilityTool,
-} from "@/lib/chat/tools/check-availability";
+  GET_AVAILABILITY_TOOL,
+  getAvailabilityTool,
+} from "@/lib/chat/tools/get-availability";
+import {
+  CREATE_ORDER_TOOL,
+  createOrderTool,
+} from "@/lib/chat/tools/create-order";
 import { getActiveSystemPrompt } from "@/lib/prompt/repository";
 import { corsHeaders, isAllowedOrigin } from "@/lib/cors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
-// Cliente de DB (pg/Neon) no corre en edge → runtime Node. Techo 30s al stream.
-export const maxDuration = 30;
+// Cliente de DB (pg/Neon) no corre en edge → runtime Node. Techo 60s al stream:
+// hasta 5 steps con tools de 10s de timeout pueden superar 30s.
+export const maxDuration = 60;
 
 /** Preflight CORS para navegadores cross-origin (el embed.js cruzado). */
 export async function OPTIONS(request: Request) {
@@ -128,9 +139,51 @@ export async function POST(request: Request) {
 
   assertAiConfigured();
 
-  // 5) Persistir user antes del stream; reconstruir contexto desde la DB.
+  // 5) Persistir user antes del stream; reconstruir contexto desde la DB:
+  // últimas 25 filas contando todo, con los pares del Registro de Tool
+  // re-inyectados como mensajes de tool reales del protocolo. Ver ADR-0006.
   await saveMessage({ conversationId: id, role: "user", content });
-  const history = await loadHistory(id);
+  const context = await loadModelContext(id);
+
+  // Índice de resultados por toolCallId para emparejar con su llamada.
+  const resultsById = new Map<string, Record<string, unknown>>();
+  for (const item of context) {
+    if (item.role === "tool_result" && item.payload?.toolCallId) {
+      resultsById.set(String(item.payload.toolCallId), item.payload);
+    }
+  }
+  const messages: ModelMessage[] = [];
+  for (const item of context) {
+    if (item.role === "user" || item.role === "assistant") {
+      messages.push({ role: item.role, content: item.content });
+      continue;
+    }
+    // Solo pares completos: un tool_call sin result en la ventana, un
+    // tool_result cuyo call quedó fuera de ella o un payload malformado se
+    // descartan — los providers exigen pares completos.
+    if (item.role !== "tool_call" || !item.payload?.toolCallId) continue;
+    const toolCallId = String(item.payload.toolCallId);
+    const toolResult = resultsById.get(toolCallId);
+    if (!toolResult) continue;
+    const toolName = String(item.payload.toolName);
+    messages.push({
+      role: "assistant",
+      content: [
+        { type: "tool-call", toolCallId, toolName, input: item.payload.input },
+      ],
+    });
+    messages.push({
+      role: "tool",
+      content: [
+        {
+          type: "tool-result",
+          toolCallId,
+          toolName,
+          output: { type: "json", value: toolResult.output as JSONValue },
+        },
+      ],
+    });
+  }
 
   // Lee la versión activa en cada request (sin cache): los cambios de prompt
   // desde el admin aplican al instante. buildSystemPrompt antepone la mecánica
@@ -141,11 +194,55 @@ export async function POST(request: Request) {
   const result = streamText({
     model: chatModel,
     system,
-    messages: history.map((m) => ({ role: m.role, content: m.content })),
+    messages,
     // Multi-step: sin stopWhen el modelo llama la tool y NO redacta la respuesta.
-    tools: { [CHECK_AVAILABILITY_TOOL]: checkAvailabilityTool },
+    tools: {
+      [GET_AVAILABILITY_TOOL]: getAvailabilityTool,
+      [CREATE_ORDER_TOOL]: createOrderTool,
+    },
     stopWhen: stepCountIs(5),
     abortSignal: request.signal,
+    // Registro de Tool: persiste cada llamada y su resultado al cerrar el step.
+    // El SDK hace await del callback antes del siguiente step y de onFinish →
+    // las filas de tool siempre preceden a la fila assistant. Ver ADR-0005.
+    onStepFinish: async ({ toolCalls, toolResults }) => {
+      for (const call of toolCalls) {
+        try {
+          await saveToolMessage({
+            conversationId: id,
+            role: "tool_call",
+            content: call.toolName,
+            payload: {
+              toolCallId: call.toolCallId,
+              toolName: call.toolName,
+              input: call.input,
+            },
+          });
+          const result = toolResults.find(
+            (r) => r.toolCallId === call.toolCallId
+          );
+          // Sin resultado (p. ej. input inválido) la fila tool_call queda
+          // huérfana — legal; las vistas la toleran.
+          if (result) {
+            await saveToolMessage({
+              conversationId: id,
+              role: "tool_result",
+              content: call.toolName,
+              payload: {
+                toolCallId: call.toolCallId,
+                toolName: call.toolName,
+                output: result.output,
+              },
+            });
+          }
+        } catch (error) {
+          console.error(
+            "[chat] no se pudo persistir registro de tool",
+            JSON.stringify({ conversationId: id, error: String(error) })
+          );
+        }
+      }
+    },
     onFinish: async ({ text }) => {
       const assistantText = text.trim();
       if (assistantText.length === 0) return;

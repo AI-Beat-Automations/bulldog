@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import {
+  DefaultChatTransport,
+  getToolName,
+  isToolUIPart,
+  type UIMessage,
+} from "ai";
 import { Bot, FileText, Plus, Send } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ToolBubble } from "@/components/chat/tool-bubbles";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -68,14 +74,6 @@ function createPlaygroundTransport(onConversationId: (id: string | null) => void
       }
     },
   };
-}
-
-// Concatena las partes de texto de un mensaje (ignora otras partes).
-function messageText(message: UIMessage): string {
-  return message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("");
 }
 
 const PLAYGROUND_INTRO =
@@ -145,13 +143,54 @@ export function PlaygroundClient({
       if (cancelled) return;
       setConversationId(stored);
       if (history.length === 0) return;
-      setMessages(
-        history.map((m, i) => ({
+      // Índice de resultados por toolCallId para emparejar con su llamada.
+      const resultsById = new Map<string, Record<string, unknown>>();
+      for (const item of history) {
+        if (item.role === "tool_result" && item.payload) {
+          resultsById.set(String(item.payload.toolCallId), item.payload);
+        }
+      }
+      const restored: UIMessage[] = [];
+      history.forEach((item, i) => {
+        if (item.role === "user" || item.role === "assistant") {
+          restored.push({
+            id: `restored-${i}`,
+            role: item.role,
+            parts: [{ type: "text", text: item.content }],
+          });
+          return;
+        }
+        if (item.role !== "tool_call" || !item.payload) return;
+        // Registro de Tool → mensaje assistant con una parte dynamic-tool
+        // sintética: reutiliza el mismo render que las tool parts en vivo.
+        // Un tool_call sin result (fila huérfana) queda en input-available.
+        const toolCallId = String(item.payload.toolCallId);
+        const toolName = String(item.payload.toolName);
+        const result = resultsById.get(toolCallId);
+        restored.push({
           id: `restored-${i}`,
-          role: m.role,
-          parts: [{ type: "text", text: m.content }],
-        }))
-      );
+          role: "assistant",
+          parts: [
+            result
+              ? {
+                  type: "dynamic-tool",
+                  toolName,
+                  toolCallId,
+                  state: "output-available",
+                  input: item.payload.input,
+                  output: result.output,
+                }
+              : {
+                  type: "dynamic-tool",
+                  toolName,
+                  toolCallId,
+                  state: "input-available",
+                  input: item.payload.input,
+                },
+          ],
+        });
+      });
+      setMessages(restored);
     });
     return () => {
       cancelled = true;
@@ -276,19 +315,64 @@ export function PlaygroundClient({
                 </div>
               </div>
             ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "max-w-[80%] whitespace-pre-wrap break-words rounded-[15px] px-3.5 py-2.5 text-sm leading-[1.55] [animation:bdfade_.25s_ease_both]",
-                    message.role === "user"
-                      ? "self-end rounded-tr-[5px] bg-primary text-primary-foreground"
-                      : "self-start rounded-tl-[5px] border border-border bg-card text-foreground shadow-xs"
-                  )}
-                >
-                  {messageText(message)}
-                </div>
-              ))
+              // Partes en orden: texto → burbuja de siempre; tool parts →
+              // burbujas de llamada/resultado (la MISMA parte transiciona de
+              // estado, por eso la llamada se sigue mostrando con el output).
+              messages.map((message) =>
+                message.parts.map((part, i) => {
+                  const key = `${message.id}-${i}`;
+                  if (part.type === "text") {
+                    return (
+                      <div
+                        key={key}
+                        className={cn(
+                          "max-w-[80%] whitespace-pre-wrap break-words rounded-[15px] px-3.5 py-2.5 text-sm leading-[1.55] [animation:bdfade_.25s_ease_both]",
+                          message.role === "user"
+                            ? "self-end rounded-tr-[5px] bg-primary text-primary-foreground"
+                            : "self-start rounded-tl-[5px] border border-border bg-card text-foreground shadow-xs"
+                        )}
+                      >
+                        {part.text}
+                      </div>
+                    );
+                  }
+                  if (
+                    isToolUIPart(part) &&
+                    (part.state === "input-available" ||
+                      part.state === "output-available" ||
+                      part.state === "output-error")
+                  ) {
+                    const toolName = getToolName(part);
+                    return (
+                      <Fragment key={key}>
+                        <ToolBubble
+                          kind="call"
+                          toolName={toolName}
+                          detail={part.input}
+                        />
+                        {part.state === "output-available" ? (
+                          <ToolBubble
+                            kind="result"
+                            toolName={toolName}
+                            detail={part.output}
+                            ok={
+                              (part.output as { ok?: boolean })?.ok === true
+                            }
+                          />
+                        ) : null}
+                        {part.state === "output-error" ? (
+                          <ToolBubble
+                            kind="result"
+                            toolName={toolName}
+                            detail={{ errorText: part.errorText }}
+                          />
+                        ) : null}
+                      </Fragment>
+                    );
+                  }
+                  return null;
+                })
+              )
             )}
 
             {status === "submitted" ? (

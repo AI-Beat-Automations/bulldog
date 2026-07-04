@@ -3,8 +3,9 @@ import { redirect, notFound } from "next/navigation";
 import { Bot, ChevronLeft, User } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { getConversation, loadHistory } from "@/lib/chat/persistence";
+import { getConversation, loadThread } from "@/lib/chat/persistence";
 import { cn } from "@/lib/utils";
+import { ToolBubble } from "@/components/chat/tool-bubbles";
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", {
   day: "numeric",
@@ -26,7 +27,11 @@ export default async function AdminThreadPage({
   const conversation = await getConversation(id);
   if (!conversation) notFound();
 
-  const messages = await loadHistory(id);
+  const messages = await loadThread(id);
+  // El contador del header cuenta solo mensajes reales (no el Registro de Tool).
+  const messageCount = messages.filter(
+    (m) => m.role === "user" || m.role === "assistant"
+  ).length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -62,7 +67,7 @@ export default async function AdminThreadPage({
           </div>
         </div>
         <span className="shrink-0 whitespace-nowrap rounded-md bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground">
-          {messages.length} {messages.length === 1 ? "mensaje" : "mensajes"}
+          {messageCount} {messageCount === 1 ? "mensaje" : "mensajes"}
         </span>
       </header>
 
@@ -74,6 +79,25 @@ export default async function AdminThreadPage({
         ) : (
           <div className="mx-auto flex max-w-[720px] flex-col gap-5">
             {messages.map((m, i) => {
+              // Registro de Tool: chip alineado al lado del asistente, sin
+              // avatar ni label. Un tool_call huérfano solo muestra la llamada.
+              if (m.role === "tool_call" || m.role === "tool_result") {
+                const isCall = m.role === "tool_call";
+                return (
+                  <ToolBubble
+                    key={i}
+                    kind={isCall ? "call" : "result"}
+                    toolName={m.content}
+                    detail={isCall ? m.payload?.input : m.payload?.output}
+                    ok={
+                      isCall
+                        ? undefined
+                        : (m.payload?.output as { ok?: boolean } | undefined)
+                            ?.ok === true
+                    }
+                  />
+                );
+              }
               const isUser = m.role === "user";
               return (
                 <div

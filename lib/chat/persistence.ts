@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { chatConversations, chatMessages } from "@/lib/db/schema";
@@ -12,11 +12,21 @@ export class ConversationNotFoundError extends Error {
 
 export type ChatRole = "user" | "assistant";
 
+/** Roles del Registro de Tool (llamada y resultado). Ver docs/adr/0005. */
+export type ToolRole = "tool_call" | "tool_result";
+
 export type ConversationSource = "widget" | "playground";
 
 export interface HistoryMessage {
   role: ChatRole;
   content: string;
+}
+
+/** Fila del hilo completo (mensajes + Registro de Tool), en orden cronológico. */
+export interface ThreadItem {
+  role: ChatRole | ToolRole;
+  content: string;
+  payload: Record<string, unknown> | null;
 }
 
 export async function createConversation(
@@ -69,7 +79,15 @@ export async function listConversationsWithTail(
       lastAt: sql<Date | null>`max(${chatMessages.createdAt})`,
     })
     .from(chatConversations)
-    .leftJoin(chatMessages, eq(chatMessages.conversationId, chatConversations.id))
+    // Solo user/assistant: las filas de tool no cuentan como mensajes ni mueven
+    // la última actividad del listado.
+    .leftJoin(
+      chatMessages,
+      and(
+        eq(chatMessages.conversationId, chatConversations.id),
+        inArray(chatMessages.role, ["user", "assistant"])
+      )
+    )
     .groupBy(chatConversations.id)
     .orderBy(desc(sql`max(${chatMessages.createdAt})`))
     .limit(limit);
@@ -93,6 +111,7 @@ export async function listConversationsWithTail(
         ids.map((id) => sql`${id}`),
         sql`, `
       )})
+        and ${chatMessages.role} in ('user', 'assistant')
     ) t
     where rn <= 2
     order by conversation_id, rn desc
@@ -119,15 +138,56 @@ export async function listConversationsWithTail(
   }));
 }
 
-export async function loadHistory(
-  conversationId: string
-): Promise<HistoryMessage[]> {
+/** Filas del hilo que entran al contexto del modelo por request. Ver ADR-0006. */
+export const MODEL_CONTEXT_ROWS = 25;
+
+/**
+ * Ventana de contexto del modelo: las últimas `limit` filas del hilo contando
+ * TODO (mensajes de texto Y Registro de Tool), en orden cronológico. El route
+ * re-inyecta los pares call/result como mensajes de tool del protocolo.
+ * Ver docs/adr/0006.
+ */
+export async function loadModelContext(
+  conversationId: string,
+  limit = MODEL_CONTEXT_ROWS
+): Promise<ThreadItem[]> {
   const rows = await db
-    .select({ role: chatMessages.role, content: chatMessages.content })
+    .select({
+      role: chatMessages.role,
+      content: chatMessages.content,
+      payload: chatMessages.payload,
+    })
+    .from(chatMessages)
+    .where(eq(chatMessages.conversationId, conversationId))
+    .orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
+    .limit(limit);
+  // La query trae las más recientes primero; el modelo las quiere cronológicas.
+  return rows.reverse().map((r) => ({
+    role: r.role,
+    content: r.content,
+    payload: (r.payload as Record<string, unknown> | null) ?? null,
+  }));
+}
+
+/**
+ * Hilo completo para las vistas del admin (Playground restore y detalle de
+ * Conversaciones): mensajes + Registro de Tool, en orden cronológico.
+ */
+export async function loadThread(conversationId: string): Promise<ThreadItem[]> {
+  const rows = await db
+    .select({
+      role: chatMessages.role,
+      content: chatMessages.content,
+      payload: chatMessages.payload,
+    })
     .from(chatMessages)
     .where(eq(chatMessages.conversationId, conversationId))
     .orderBy(asc(chatMessages.createdAt), asc(chatMessages.id));
-  return rows.map((r) => ({ role: r.role, content: r.content }));
+  return rows.map((r) => ({
+    role: r.role,
+    content: r.content,
+    payload: (r.payload as Record<string, unknown> | null) ?? null,
+  }));
 }
 
 export async function saveMessage(input: {
@@ -139,6 +199,21 @@ export async function saveMessage(input: {
     conversationId: input.conversationId,
     role: input.role,
     content: input.content,
+  });
+}
+
+/** Persiste una fila del Registro de Tool (llamada o resultado). */
+export async function saveToolMessage(input: {
+  conversationId: string;
+  role: ToolRole;
+  content: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  await db.insert(chatMessages).values({
+    conversationId: input.conversationId,
+    role: input.role,
+    content: input.content,
+    payload: input.payload,
   });
 }
 

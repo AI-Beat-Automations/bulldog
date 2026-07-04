@@ -27,20 +27,30 @@ De dónde nació un hilo: `widget` (cliente final real, vía bubble embebido) o 
 _Avoid_: "canal" (no hay multi-canal: WhatsApp, etc.), "tenant".
 
 **Disponibilidad (Availability)**:
-Cupos libres para agendar una **Cita** en un día dado, agrupados por **Franja**. El **Asistente** la consulta (no la calcula) llamando la tool `check_availability` contra un webhook externo de n8n; el negocio opera en `America/Los_Angeles` (Las Vegas). Consultar disponibilidad **NO es agendar** — esta tool solo lee.
-_Avoid_: "agenda"/"reservar" (esto no crea ninguna Cita), "calendario" (no exponemos el calendario, solo el conteo).
+Cupos libres para agendar una **Cita** por día y **Franja**, dentro de un rango de fechas. El **Asistente** la consulta (no la calcula) llamando la tool `get_availability` (`dateStart`/`dateEnd` en formato `YYYY-MM-DD`) contra un webhook externo de n8n (lori-n8n); el negocio opera en `America/Los_Angeles` (Las Vegas). Cuando el visitante pregunta por **un día concreto**, el Asistente consulta una **ventana ±4 días** alrededor (el servidor recorta fechas pasadas) para poder responder preguntas cercanas desde el historial sin repetir la llamada; solo re-consulta si las fechas caen fuera de lo ya visto — y SIEMPRE re-consulta justo antes de crear una **Orden** (los Cupos pudieron cambiar). Consultar disponibilidad **NO es agendar** — esta tool solo lee. Reemplaza a la antigua `check_availability` (jumpers-n8n, un solo `date` ISO con `Z`), que queda eliminada.
+_Avoid_: "agenda"/"reservar" (esto no crea ninguna Cita), "calendario" (no exponemos el calendario, solo el conteo), "check_availability" (nombre jubilado).
 
 **Franja**:
-Bloque horario del día del negocio en hora de Las Vegas. Hoy n8n devuelve `08-12` (mañana, 8:00–12:00) y `12-17` (tarde, 12:00–17:00); el código las trata como **dinámicas** (itera las que vengan) y solo las traduce a lenguaje humano.
-_Avoid_: "horario" (a secas), "turno".
+Bloque horario del día del negocio en hora de Las Vegas. n8n devuelve por día las llaves `morning` (mañana, 8:00–12:00) y `afternoon` (tarde, 12:00–17:00). Al reservar, la **Cita** ocupa la franja completa: `start_date`/`end_date` de `create_order` son exactamente los límites de la franja elegida (ej. morning → `2026-06-29 08:00:00` a `2026-06-29 12:00:00`, hora local del negocio, sin `Z`).
+_Avoid_: "horario" (a secas), "turno", "08-12"/"12-17" (llaves del contrato viejo).
 
 **Cupo**:
 Una unidad de Disponibilidad dentro de una Franja. El número que devuelve n8n (`4`) es **cuántos Cupos quedan libres**; `0` o Franja ausente = sin Disponibilidad en esa Franja. El Asistente nunca inventa Cupos: si la respuesta viene vacía, dice que no hay Disponibilidad.
 _Avoid_: "slot" en el lenguaje de cara al visitante, "espacio".
 
+**Orden (Order)**:
+La reserva de una **Cita**: el Asistente la crea llamando la tool `create_order` (webhook n8n lori). Exige TODOS los datos del cliente (name, last_name, email, phone, address, city, zipcode, notes con la descripción del servicio), un día + **Franja** con **Cupos** > 0 verificados vía `get_availability`, y la confirmación explícita del visitante sobre el resumen. Éxito = HTTP 200 (el body de la respuesta no se interpreta). **Nunca se auto-reintenta**: en fallo (non-200 o timeout) el Asistente informa y solo reintenta si el visitante lo pide.
+_Avoid_: "pedido"/"compra" (no es e-commerce), "booking" en texto de cara al visitante.
+
+**Registro de Tool (Tool Log)**:
+El par de burbujas persistidas que documentan cada ejecución de tool: una para la **llamada** (hover/tap muestra el request body) y otra para el **resultado** (hover/tap muestra el response body o status). Se guardan en la DB junto a los mensajes del hilo y sobreviven recargas. Solo se renderizan en superficies internas (Playground y detalle de Conversaciones); el visitante del widget nunca las ve, aunque sus conversaciones también las generan.
+_Avoid_: "log del sistema" (no es un log técnico aparte; vive en el hilo), "trace".
+
 ## Relationships
 
 - El **System Prompt** gobierna al **Asistente** con el que conversa el público anónimo.
+- La **Disponibilidad** se consulta con `get_availability`; una **Orden** se crea con `create_order`; consultar nunca reserva y reservar exige haber consultado.
+- Cada ejecución de tool produce un **Registro de Tool** (llamada + resultado) en el hilo de la **Conversation**, sin importar el **Source**.
 - Existen muchas **Prompt Versions**; exactamente una es la **Active Version** (invariante).
 - El cuerpo de la **Active Version** ES el **System Prompt** en runtime; si faltara, se cae a un default hardcodeado.
 
@@ -59,3 +69,7 @@ _Avoid_: "slot" en el lenguaje de cara al visitante, "espacio".
 - **Reversión de decisiones del PRD**: el PRD §14 declaraba que "el playground desaparece" y que el **Admin** "solo lee". Decisión nueva (2026-06-15): se **reintroduce el Playground** y el Admin **escribe** mensajes `user` dentro de él. El invariante "Admin read-only" queda acotado al listado de Conversaciones, no al Playground. Resuelto.
 - "se van a guardar en el historial" se acotó: las conversaciones de **Playground** se persisten en las mismas tablas pero con **Source** `playground`; no se mezclan sin marca con las del **widget**. Resuelto.
 - **Riesgo aceptado (v1)**: la marca **Source** la manda el cliente en el body de `/api/chat` (no la deriva el servidor de la sesión). Es **falsificable** desde afuera → degrada la confiabilidad del listado, no es un fallo de seguridad. Upgrade conocido: derivar `source` de `auth()` en el handler. Aceptado por simplicidad.
+- "get_availability vs check_availability" se aclaró (2026-07-03): NO conviven — `get_availability` (lori-n8n, rango `dateStart`/`dateEnd`, franjas `morning`/`afternoon`) **reemplaza** a `check_availability` (jumpers-n8n, mock, un `date` con `Z`), que se elimina. Resuelto.
+- "quede registro de la llamada" se acotó: registro **persistente en DB** (no solo burbujas en vivo del stream); visible en Playground y detalle de Conversaciones, oculto en el widget. Resuelto.
+- "los formatos de fecha" se fijaron: `get_availability` usa `YYYY-MM-DD`; `create_order` usa `YYYY-MM-DD HH:mm:ss` **en hora local del negocio (Las Vegas), sin sufijo `Z`** — el contrato ISO-con-`Z` del tool viejo queda jubilado. Resuelto.
+- "que no tenga que volver a llamar la tool" se resolvió (2026-07-03) **revirtiendo parcialmente** la exclusión de tools del contexto: el modelo ahora recibe las **últimas 25 filas** del hilo (texto + **Registro de Tool** re-inyectado como mensajes de tool reales), y así lee la Disponibilidad ya consultada desde el historial. La ventana ±4 días alimenta ese cache conversacional. Ver ADR-0006. Resuelto.

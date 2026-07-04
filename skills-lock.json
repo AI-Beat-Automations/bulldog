@@ -20,10 +20,10 @@
       "computedHash": "d6122d68230d5fb99b089f9b2f44477b59f324db2c3339dc3b1ab5f63c31e3e4"
     },
     "grill-with-docs": {
-      "source": "arturxdev/skills",
+      "source": "mattpocock/skills",
       "sourceType": "github",
-      "skillPath": "skills/grill-with-docs/SKILL.md",
-      "computedHash": "6137d3828f180a9f9199fa084440a3fc1562f978195514156b3cf29730db9677"
+      "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
+      "computedHash": "e7ef25bbee50cda2eb7b3a8ef541db0a0396dad7d369f7d14fb610671dd1864b"
     },
     "techdebt": {
       "source": "arturxdev/skills",

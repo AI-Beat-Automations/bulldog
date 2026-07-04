@@ -15,9 +15,14 @@ import { relations, sql } from "drizzle-orm";
 
 export type TranscriptTurn = { role: "agent" | "user"; content: string };
 
+// Los roles de tool registran las llamadas/resultados de tools del asistente
+// (Registro de Tool). Van AL FINAL del array: agregar en medio genera
+// `ADD VALUE ... BEFORE ...` innecesario. Ver docs/adr/0005.
 export const chatMessageRoleEnum = pgEnum("chat_message_role", [
   "user",
   "assistant",
+  "tool_call",
+  "tool_result",
 ]);
 
 // Origen de la conversación: tráfico real del widget vs prueba interna del
@@ -47,6 +52,9 @@ export const chatMessages = pgTable(
       .references(() => chatConversations.id, { onDelete: "cascade" }),
     role: chatMessageRoleEnum("role").notNull(),
     content: text("content").notNull(),
+    // Solo filas de tool: { toolCallId, toolName, input | output }. NULL en
+    // mensajes user/assistant.
+    payload: jsonb("payload"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
