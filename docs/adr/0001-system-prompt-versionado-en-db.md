@@ -24,7 +24,8 @@ borra ninguna versión (cumple "no lo podemos borrar, solo actualizar").
 ## Consequences
 
 - `CHAT_SYSTEM_PROMPT` y el export `SYSTEM_PROMPT` quedan **jubilados**; el único
-  fallback cuando no hay Active Version es el `DEFAULT_SYSTEM_PROMPT` hardcodeado.
+  fallback cuando no hay Active Version es el `DEFAULT_SYSTEM_PROMPT` versionado
+  en `lib/prompt/default.ts`.
 - El route del chat hace un SELECT extra por request (sin cache): los cambios de
   prompt aplican al instante. Aceptable al volumen actual (rate limit 20/10min/IP).
 - La migración solo crea la tabla (sin seed): con cero versiones el chat usa el
