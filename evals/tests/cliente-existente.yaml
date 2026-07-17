@@ -1,0 +1,34 @@
+# Cliente EXISTENTE: al dar el teléfono durante la reserva, el Asistente debe
+# consultar get_customer_history, reconocer al cliente (Dennis Hades / Gibson) y
+# ofrecer atender en la misma dirección de archivo. El mock resuelve el teléfono
+# 2028829482 con datos; no toca el webhook real (ADR-0007).
+- description: 'Cliente existente: reconoce a Dennis Hades y ofrece la misma dirección'
+  vars:
+    conversation:
+      turns:
+      - "Hi, I'd like to book a carpet cleaning."
+      - "Dennis Hades."
+      - "Commercial carpet, about 5000 square feet. Yes, I'd like to proceed and book it."
+      - "Sure, my phone number is 202-882-9482."
+  assert:
+    # Consultó el historial del cliente con el teléfono
+    - type: javascript
+      value: context.metadata.toolCalls.some(c => c.toolName === 'get_customer_history')
+    # El lookup normalizó el teléfono al formato exacto del webhook (10 dígitos)
+    - type: javascript
+      value: |
+        const l = context.metadata.customerLookups;
+        return l.length >= 1 && /^\d{10}$/.test(l[l.length - 1].phone);
+    # La tool trajo información: hubo al menos un match
+    - type: javascript
+      value: context.metadata.customerLookups.some(l => l.found === true)
+    # Reconocer al cliente NO es agendar: no debe crear ninguna orden aquí
+    - type: javascript
+      value: context.metadata.orders.length === 0
+    # El chat saluda al cliente conocido y ofrece la misma dirección
+    - type: llm-rubric
+      value: 'The assistant recognizes the caller as an existing/returning customer named Dennis Hades and offers to service the same address already on file (on Olsen Street in Henderson) instead of asking for the address from scratch. It does not invent details.'
+    # La consulta es SILENCIOSA: no anuncia ni narra que va a revisar el historial
+    # (reflejar el RESULTADO —"veo que ya es cliente"— sí está permitido).
+    - type: not-llm-rubric
+      value: 'Before or while looking it up, the assistant tells the customer it is going to check/look up/verify their customer history or records, or narrates the lookup action (for example "let me check if you are a customer" or "I will look up your history"). Simply stating the outcome afterward does NOT count.'

@@ -1,0 +1,59 @@
+# Fallos del webhook de órdenes (contrato ADR-0004): non-2xx = rejected,
+# timeout/red = unknown_outcome. En AMBOS casos: informar con claridad,
+# jamás afirmar que la orden existe, y NUNCA reintentar por cuenta propia.
+# Cliente SIMULADO (no guionado): un LLM juega a Mary Jones con un objetivo y
+# maxTurns=12; conversa sola contra el agente hasta reservar. El webhook de
+# órdenes está mockeado en "rejected" (orderOutcome). Como en modo simulado el
+# metadata sólo refleja el último turno regenerado, aquí NO usamos asserts
+# deterministas de tools; el Juez LLM evalúa la conversación COMPLETA (que el
+# agente intentó reservar, comunicó el fallo y no reintentó solo).
+- description: 'Orden rechazada (rejected): informa el fallo y no reintenta solo'
+  provider:
+    id: 'promptfoo:simulated-user'
+    config:
+      maxTurns: 12
+      instructions: >-
+        You are Mary Jones, a customer who wants to book carpet cleaning for 3
+        standard-size bedrooms at your home. Cooperate and answer each question,
+        one at a time. Your details when asked: phone 702-555-0177, email
+        mary.jones@example.com, address 456 Oak Ave, Las Vegas, NV 89102. Any
+        weekday morning in the next two weeks works for you. When the assistant
+        reads back the booking summary, confirm explicitly ("yes, please book
+        it"). After the assistant tells you the outcome of the booking attempt,
+        acknowledge briefly and end the conversation.
+  vars:
+    orderOutcome: rejected
+  assert:
+    - type: llm-rubric
+      value: >-
+        Across the whole conversation, the assistant attempted to create the
+        booking and then clearly told the customer the booking was NOT created /
+        could not be completed. It did NOT claim the appointment was booked, and
+        it did NOT retry the booking on its own (retrying only if the customer
+        explicitly asks is acceptable).
+
+- description: 'Desenlace desconocido (unknown_outcome): no afirma que la orden existe ni reintenta'
+  vars:
+    orderOutcome: unknown_outcome
+    conversation:
+      turns:
+      - "Hi, my name is Mary Jones. I'd like to book carpet cleaning for 3 standard size bedrooms."
+      - "My phone number is 702-555-0177."
+      - "My email is mary.jones@example.com, and the service address is 456 Oak Ave, Las Vegas, NV 89102."
+      - "What's your earliest availability in the next two weeks? Any day works, and morning is fine."
+      - "That morning slot works. Please go ahead and book it."
+      - "Yes, all correct. I confirm — please create the booking now."
+      - "So is my appointment booked or not?"
+  assert:
+    - type: javascript
+      value: context.metadata.orders.length === 1
+    # Regla dura del ADR-0004: en unknown_outcome JAMÁS se reintenta
+    # (la orden pudo haberse creado; reintentar puede duplicar la cita)
+    - type: javascript
+      value: context.metadata.toolCalls.filter(c => c.toolName === 'create_order').length === 1
+    - type: llm-rubric
+      value: >-
+        The assistant explained it could NOT CONFIRM whether the booking was
+        registered (the outcome is unknown — it may or may not exist). It must
+        NOT affirm the appointment is booked, must NOT affirm it failed, and
+        must NOT have silently retried

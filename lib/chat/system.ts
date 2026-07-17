@@ -1,5 +1,6 @@
 import { BUSINESS_TIMEZONE } from "./timezone";
 import { GET_AVAILABILITY_TOOL } from "./tools/get-availability";
+import { GET_CUSTOMER_HISTORY_TOOL } from "./tools/get-customer-history";
 import { CREATE_ORDER_TOOL } from "./tools/create-order";
 
 // Reexport para no romper imports existentes (la constante vive en timezone.ts
@@ -43,6 +44,32 @@ export function buildSystemPrompt(activePrompt: string): string {
     `Antes de llamar "${GET_AVAILABILITY_TOOL}" revisa el historial: si un resultado`,
     `previo ya cubre las fechas preguntadas, responde desde ahí sin volver a`,
     `llamarla; solo consulta de nuevo si las fechas caen fuera de lo ya visto.`,
+    ``,
+    `Tienes la herramienta "${GET_CUSTOMER_HISTORY_TOOL}" para saber si el visitante`,
+    `ya es cliente nuestro (ya nos compró o tuvo un servicio). En cuanto obtengas el`,
+    `teléfono del visitante durante la reserva (ya sea porque lo pediste o porque lo`,
+    `dio por su cuenta), DEBES llamar esta herramienta UNA vez, antes de pedirle el`,
+    `resto de sus datos. Llamarla es OBLIGATORIO: es una acción real, no algo que`,
+    `puedas omitir ni "resolver de memoria". Recibe "phone" en cualquier formato (el`,
+    `servidor lo normaliza).`,
+    `CÓMO llamarla: emite la llamada a la herramienta DIRECTAMENTE, sin escribir`,
+    `ningún texto en ese turno. NO la anuncies ni la narres: están PROHIBIDAS frases`,
+    `como "déjame revisar si ya eres cliente", "un momento mientras reviso tu`,
+    `información" o "let me check if you are a customer". No escribas nada; solo`,
+    `llama la herramienta. Cuando regrese su resultado, ahí sí redactas tu respuesta.`,
+    `PROHIBIDO INVENTAR: nunca afirmes que el visitante es cliente conocido, ni`,
+    `menciones datos "en archivo" (nombre, email, dirección), a menos que ESTA`,
+    `herramienta lo haya devuelto en su resultado. Sin un resultado con found=true,`,
+    `es cliente nuevo. Según la respuesta:`,
+    `- found=true  → es cliente conocido. Salúdalo por su nombre, dile que`,
+    `  encontraste su registro y OFRÉCELE atender en la misma dirección de`,
+    `  archivo (la de "work_orders[].location"); usa el email/dirección que ya`,
+    `  vienen para CONFIRMARLOS ("tengo tu dirección como X, ¿la usamos?") en vez`,
+    `  de pedirlos desde cero. Nunca inventes datos que la tool no devolvió.`,
+    `- found=false → es cliente nuevo (primera vez): sigue el flujo normal y`,
+    `  reúne sus datos de contacto uno por uno.`,
+    `Si la tool falla (ok=false), no afirmes nada sobre historial: trátalo como`,
+    `cliente nuevo y continúa. Consultar historial NO agenda ni crea nada.`,
     ``,
     `Tienes la herramienta "${CREATE_ORDER_TOOL}" para crear la reserva. Se reserva`,
     `la FRANJA COMPLETA: "start_date" y "end_date" son los límites exactos de la`,

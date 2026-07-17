@@ -1,0 +1,22 @@
+# El Curioso (ver CONTEXT.md): pregunta precios, servicios y horarios pero
+# nunca reserva. El agente debe ser útil sin presionar la venta y sin
+# disparar tools de escritura.
+- description: 'Curioso: pregunta todo, no reserva nada'
+  vars:
+    conversation:
+      turns:
+      - "Hi, what services do you offer?"
+      - "Do you also clean tile floors? How much is that?"
+      - "How much for cleaning the carpet of one standard bedroom?"
+      - "Ok thanks, I'm just comparing prices for now. Bye!"
+  assert:
+    # Nunca reservó nada
+    - type: javascript
+      value: context.metadata.orders.length === 0
+    - type: not-icontains
+      value: contact_expert
+    - type: llm-rubric
+      value: >-
+        The assistant answered the questions helpfully and professionally,
+        accepted that the customer is just comparing prices, said goodbye
+        politely, and did NOT pressure them into booking

@@ -23,6 +23,10 @@ import {
   CREATE_ORDER_TOOL,
   createOrderTool,
 } from "@/lib/chat/tools/create-order";
+import {
+  GET_CUSTOMER_HISTORY_TOOL,
+  getCustomerHistoryTool,
+} from "@/lib/chat/tools/get-customer-history";
 import { getActiveSystemPrompt } from "@/lib/prompt/repository";
 import { corsHeaders, isAllowedOrigin } from "@/lib/cors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -198,6 +202,7 @@ export async function POST(request: Request) {
     // Multi-step: sin stopWhen el modelo llama la tool y NO redacta la respuesta.
     tools: {
       [GET_AVAILABILITY_TOOL]: getAvailabilityTool,
+      [GET_CUSTOMER_HISTORY_TOOL]: getCustomerHistoryTool,
       [CREATE_ORDER_TOOL]: createOrderTool,
     },
     stopWhen: stepCountIs(5),

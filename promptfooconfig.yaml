@@ -1,0 +1,16 @@
+description: Evals de conversación del Asistente Bulldog (ver ADR-0007)
+
+providers:
+  - id: file://evals/agent-provider.ts
+    label: bulldog-agent
+
+prompts:
+  - '{{message}}'   # para tests simples; los multi-turn usan vars.userTurns
+
+defaultTest:
+  options:
+    # Modelo JUEZ para los llm-rubric — más fuerte que el agente (haiku)
+    provider: openrouter:anthropic/claude-sonnet-4.5
+
+tests:
+  - file://evals/tests/*.yaml

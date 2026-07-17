@@ -1,0 +1,39 @@
+# Reserva completa de punta a punta. Las fechas son relativas y el guion se
+# adapta a la disponibilidad real de n8n ("earliest availability") para no
+# depender de que "mañana" tenga cupos (ADR-0007).
+- description: 'Happy path: reserva completa hasta create_order exitosa'
+  vars:
+    orderOutcome: success
+    conversation:
+      turns:
+      - "Hi, my name is John Smith. I'd like to book carpet cleaning for 3 standard size bedrooms at my house."
+      - "My phone number is 702-555-0123."
+      - "My email is john.smith@example.com, and the service address is 123 Main St, Las Vegas, NV 89101."
+      - "What's your earliest availability in the next two weeks? Any day works, and morning is fine."
+      - "That morning slot works for me. Please go ahead and book it."
+      - "Yes, everything is correct. I confirm — please create the booking now."
+      - "Thank you!"
+  assert:
+    # Consultó disponibilidad antes de ofrecer horarios
+    - type: javascript
+      value: context.metadata.toolCalls.some(c => c.toolName === 'get_availability')
+    # Exactamente UNA orden (== 1 también atrapa duplicados)
+    - type: javascript
+      value: context.metadata.orders.length === 1
+    # Payload completo: 10 campos presentes y no vacíos
+    - type: javascript
+      value: |
+        const orders = context.metadata.orders;
+        if (orders.length === 0) return false;
+        const o = orders[0];
+        const campos = ['name','last_name','email','phone','address','city','zipcode','notes','start_date','end_date'];
+        return campos.every(k => typeof o[k] === 'string' && o[k].trim().length > 0);
+    # Fechas de la franja sin sufijo Z, formato del contrato n8n
+    - type: javascript
+      value: |
+        const o = context.metadata.orders[0];
+        if (!o) return false;
+        const re = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+        return re.test(o.start_date) && re.test(o.end_date);
+    - type: llm-rubric
+      value: 'The assistant confirmed the booking was successfully created and gave a summary including date, time block, and price'

@@ -1,0 +1,35 @@
+# Cliente NUEVO: al dar el teléfono, el Asistente consulta get_customer_history,
+# el mock devuelve "sin datos" (found=false) para cualquier teléfono que no sea
+# el cliente de fixture (2028829482), y el Asistente sigue el flujo normal de
+# primera vez, sin inventar historial ni dirección previa.
+#
+# El teléfono es un 10 dígitos VÁLIDO no-cliente (702-555-0199): un número
+# incompleto como "111111111" hace que el agente se detenga a confirmarlo en vez
+# de consultarlo, y la tool nunca se llamaría (no es lo que probamos aquí).
+- description: 'Cliente nuevo: sin historial, sigue el flujo normal de primera vez'
+  vars:
+    conversation:
+      turns:
+      - "Hello, I'd like to schedule a carpet cleaning."
+      - "Sarah Connor."
+      - "A suite-size area, about 430 square feet. Yes, please go ahead and book it."
+      - "Sure, my number is 702-555-0199."
+  assert:
+    # También aquí consultó el historial con el teléfono
+    - type: javascript
+      value: context.metadata.toolCalls.some(c => c.toolName === 'get_customer_history')
+    # El lookup ocurrió y NO encontró cliente (todos found=false)
+    - type: javascript
+      value: |
+        const l = context.metadata.customerLookups;
+        return l.length >= 1 && l.every(x => x.found === false);
+    # No crea ninguna orden en este tramo
+    - type: javascript
+      value: context.metadata.orders.length === 0
+    # El chat trata al visitante como cliente nuevo: NO afirma un registro previo
+    # ni saluda como cliente recurrente; continúa pidiendo los datos que faltan.
+    - type: llm-rubric
+      value: 'The assistant treats the customer as a new/first-time customer: it does NOT claim to have found a prior record and does NOT greet them as a returning customer, and it continues the normal booking flow (asking for the remaining contact/booking details). It must not invent any previous address or history.'
+    # La consulta es SILENCIOSA: no anuncia ni narra que va a revisar el historial.
+    - type: not-llm-rubric
+      value: 'Before or while looking it up, the assistant tells the customer it is going to check/look up/verify their customer history or records, or narrates the lookup action (for example "let me check if you are a customer" or "let me first check your customer history"). Simply continuing the normal flow does NOT count.'

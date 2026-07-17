@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
+    "eval": "promptfoo eval --env-file .env",
+    "eval:view": "promptfoo view",
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
@@ -38,6 +40,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "promptfoo": "^0.121.19",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

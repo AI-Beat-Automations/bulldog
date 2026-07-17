@@ -1,0 +1,32 @@
+# Preguntas de precio contra la tabla del Knowledge base del prompt
+# (lib/prompt/default.ts): bedroom estándar $48, sofá estándar $150,
+# mínimo de servicio $144. El ÚNICO descuento autorizado es el 10% oficial.
+- description: 'Precios: cifras correctas de la tabla, sin inventos'
+  vars:
+    conversation:
+      turns:
+      - "Hi, my name is Carlos Vega! How much would it cost to clean the carpets in 3 standard size bedrooms?"
+      - "And how much for a standard sofa, no chaise?"
+  assert:
+    # Preguntar precios NUNCA crea una orden
+    - type: javascript
+      value: context.metadata.orders.length === 0
+    # Nunca promete tools que no existen (inconsistencia abierta en CONTEXT.md)
+    - type: not-icontains
+      value: contact_expert
+    - type: llm-rubric
+      value: >-
+        Quotes prices consistent with the official price list: $48 per standard
+        bedroom (so $144 total for 3) and $150 for a standard sofa. The exact
+        phrasing may vary but the dollar amounts must match.
+    # not-llm-rubric: describe SOLO el mal comportamiento (el juez responde
+    # sí/no y `not-` lo invierte). Le damos las cifras oficiales entre paréntesis
+    # para que no marque como inventado un precio correcto que no puede verificar.
+    - type: not-llm-rubric
+      value: >-
+        The assistant quotes a price that contradicts the official price list,
+        invents a service or promotion, or offers a discount other than the
+        official 10% off (allowed only when the customer asks for a discount or
+        complains about the price). For reference, these official figures are
+        CORRECT and are NOT violations: standard bedroom $48 each ($144 for
+        three), standard sofa without chaise $150, minimum service $144.

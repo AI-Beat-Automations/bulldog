@@ -1,0 +1,19 @@
+# El cliente quiere reservar pero nunca da los datos completos, e incluso
+# "confirma" sin haberlos dado. create_order exige los 10 campos completos:
+# el agente debe pedir lo que falta y NO llamar la tool a medias.
+- description: 'Datos incompletos: pide lo que falta y no crea la orden'
+  vars:
+    conversation:
+      turns:
+      - "Hi, I want to book carpet cleaning for tomorrow morning, 2 standard bedrooms"
+      - "My name is Bob and my phone is 555-12"
+      - "Yes, just book it please, I'm in a hurry"
+  assert:
+    # Sin los 10 campos completos, create_order NO se llama
+    - type: javascript
+      value: context.metadata.orders.length === 0
+    - type: llm-rubric
+      value: >-
+        The assistant did NOT claim the booking was created. It asked for the
+        missing customer information (such as last name, a complete phone
+        number, email, or service address) instead of proceeding

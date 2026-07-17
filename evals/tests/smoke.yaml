@@ -1,0 +1,14 @@
+- description: 'Smoke: saluda y se presenta como el asistente de Bulldog'
+  vars:
+    message: 'Hi, do you clean carpets?'
+  assert:
+    - type: icontains
+      value: bulldog
+    # Un simple "hi" JAMÁS debe disparar create_order (Booking Intent Gate)
+    - type: javascript
+      value: context.metadata.orders.length === 0
+    # Nunca promete tools que no existen (inconsistencia abierta en CONTEXT.md)
+    - type: not-icontains
+      value: contact_expert
+    - type: llm-rubric
+      value: 'Responds professionally in English as a carpet cleaning booking assistant, without inventing services'
