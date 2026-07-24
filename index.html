@@ -3,12 +3,264 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="http://localhost:3000/widget.v1.js" data-color="#3f5ec2" data-title="Bulldog" defer></script>
-    <title></title>
-    <link href="css/style.css" rel="stylesheet">
+    <title>Bulldog Carpet Cleaning — Limpieza de alfombras en Las Vegas</title>
+
+    <!-- ── Widget de Bulldog ────────────────────────────────────────────────
+         Este es el único snippet que un cliente pegaría en su sitio.
+         El script crea la burbuja en un shadow root y monta el iframe
+         (/widget) al primer click.
+         OJO: el origen desde el que se sirve esta página debe estar en
+         ALLOWED_ORIGINS del deploy, o el CSP frame-ancestors bloquea el
+         iframe. Hoy permitidos: bulldog.com, www.bulldog.com, localhost:3000.
+    ──────────────────────────────────────────────────────────────────────── -->
+    <script
+      src="http://localhost:3000/widget.v1.js"
+      data-title="Bulldog"
+      defer
+    ></script>
+
+    <style>
+      :root {
+        --brand: #eb3471;   /* rosa de marca */
+        --charcoal: #4d3e44; /* barra superior / boton CONTACT */
+        --cta: #02a4f5;      /* azul BOOK NOW */
+        --sky: #a7d1e6;      /* azul claro del titulo */
+        --ink: #2e2529;
+        --muted: #6b575e;
+        --line: #f0dfe6;
+        --bg: #ffffff;
+        --soft: #fbf1f5;
+      }
+      .topbar { background: var(--charcoal); color: #fff; font-size: 14px; }
+      .topbar .wrap { display: flex; justify-content: space-between; gap: 16px; padding-block: 12px; flex-wrap: wrap; }
+      .topbar b { color: #fff; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        line-height: 1.6;
+      }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        position: sticky; top: 0; background: rgba(255,255,255,.9);
+        backdrop-filter: blur(8px); z-index: 10;
+      }
+      .nav { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+      .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.02em; }
+      .logo span.dot {
+        width: 28px; height: 28px; border-radius: 8px; background: var(--brand);
+        display: grid; place-items: center; color: #fff; font-size: 15px;
+      }
+      .nav a { color: var(--muted); text-decoration: none; font-size: 15px; }
+      .nav a:hover { color: var(--ink); }
+      .nav-links { display: flex; gap: 26px; align-items: center; }
+      .btn {
+        display: inline-block; background: var(--brand); color: #fff; text-decoration: none;
+        padding: 11px 20px; border-radius: 10px; font-weight: 600; font-size: 15px;
+      }
+      .btn.ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+      .btn.dark { background: var(--charcoal); }
+      .btn.cta { background: var(--cta); }
+
+      .hero { padding: 84px 0 64px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+      .hero h1 { font-size: 50px; line-height: 1.08; letter-spacing: -.03em; margin: 0 0 18px; }
+      .hero p { font-size: 18px; color: var(--muted); margin: 0 0 28px; }
+      .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+      .hero-art {
+        aspect-ratio: 4/3; border-radius: 18px; border: 1px solid var(--line);
+        background: linear-gradient(135deg, #fde7ef 0%, #f8c3d8 55%, #f3a8c6 100%);
+        display: grid; place-items: center; font-size: 72px;
+      }
+
+      .hero-band { background: var(--brand); color: #fff; }
+      .hero-band .hero p { color: #ffe0ec; }
+      .hero-band .btn { background: #fff; color: var(--brand); }
+      .hero-band .btn.ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.55); }
+      .hero-band .hero-art { border-color: rgba(255,255,255,.35); }
+
+      .strip { background: var(--soft); border-block: 1px solid var(--line); padding: 22px 0; }
+      .strip .wrap { display: flex; gap: 40px; justify-content: space-between; flex-wrap: wrap; color: var(--muted); font-size: 14px; }
+
+      section { padding: 72px 0; }
+      h2 { font-size: 32px; letter-spacing: -.02em; margin: 0 0 10px; }
+      .lead { color: var(--muted); margin: 0 0 36px; max-width: 620px; }
+
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+      .card { border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+      .card h3 { margin: 12px 0 6px; font-size: 18px; }
+      .card p { margin: 0; color: var(--muted); font-size: 15px; }
+      .card .ico { font-size: 26px; }
+      .price { font-size: 26px; font-weight: 700; margin-top: 14px; }
+      .price small { font-size: 14px; font-weight: 400; color: var(--muted); }
+
+      .faq { border-top: 1px solid var(--line); }
+      .faq details { border-bottom: 1px solid var(--line); padding: 18px 0; }
+      .faq summary { cursor: pointer; font-weight: 600; }
+      .faq p { color: var(--muted); margin: 10px 0 0; }
+
+      .cta-band { background: var(--brand); color: #fff; border-radius: 18px; padding: 46px; text-align: center; }
+      .cta-band h2 { color: #fff; }
+      .cta-band p { color: #ffd9e6; max-width: 520px; margin: 0 auto 24px; }
+      .cta-band .btn { background: #fff; color: var(--brand); }
+
+      footer { border-top: 1px solid var(--line); padding: 34px 0; color: var(--muted); font-size: 14px; }
+      .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+      .note {
+        margin-top: 40px; border: 1px dashed var(--brand); border-radius: 12px;
+        padding: 16px 18px; background: var(--soft); font-size: 14px; color: #6b3550;
+      }
+      .note code { background: #f7dbe6; padding: 2px 6px; border-radius: 5px; }
+
+      @media (max-width: 860px) {
+        .hero { grid-template-columns: 1fr; padding: 56px 0 40px; }
+        .hero h1 { font-size: 36px; }
+        .grid { grid-template-columns: 1fr; }
+        .nav-links a:not(.btn) { display: none; }
+      }
+    </style>
   </head>
+
   <body>
-  
-    <p>HOLAAAA</p>
+    <div class="topbar">
+      <div class="wrap">
+        <span>Se Habla Español — <b>Las Vegas #1</b> Commercial Carpet Cleaners</span>
+        <span>📞 (702) 357-1313 &nbsp;·&nbsp; ✉️ bulldogcleaninghenderson@gmail.com</span>
+      </div>
+    </div>
+
+    <header>
+      <div class="wrap nav">
+        <div class="logo"><span class="dot">🐶</span> Bulldog Carpet Cleaning</div>
+        <nav class="nav-links">
+          <a href="#services">Services</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+          <a class="btn dark" href="#contact">Contact</a>
+          <a class="btn cta" href="#contact">Book Now!</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero-band">
+      <div class="wrap hero">
+        <div>
+          <h1>Your <span style="color:var(--sky)">carpets</span> like new, without lifting a finger.</h1>
+          <p>
+            Deep cleaning for carpet, upholstery and tile across the Las Vegas
+            valley. Book a morning (8–12) or afternoon (12–5) slot and our crew
+            shows up with everything ready.
+          </p>
+          <div class="cta">
+            <a class="btn" href="#contact">Check availability</a>
+            <a class="btn ghost" href="#services">See services</a>
+          </div>
+        </div>
+        <div class="hero-art">🧼</div>
+      </div>
+      </div>
+
+      <div class="strip">
+        <div class="wrap">
+          <span>⭐ 4.9 / 5 from 480 reviews</span>
+          <span>🚚 No travel fee inside the valley</span>
+          <span>💧 Dries in 4–6 hours</span>
+          <span>📍 Las Vegas · Henderson · North LV</span>
+        </div>
+      </div>
+
+      <section id="services" class="wrap">
+        <h2>What we clean</h2>
+        <p class="lead">One crew for the whole house or shop.</p>
+        <div class="grid">
+          <div class="card">
+            <div class="ico">🧽</div>
+            <h3>Carpet</h3>
+            <p>Hot water extraction that lifts stains, allergens and pet odors.</p>
+          </div>
+          <div class="card">
+            <div class="ico">🛋️</div>
+            <h3>Upholstery</h3>
+            <p>Sofas, chairs and mattresses with kid- and pet-safe products.</p>
+          </div>
+          <div class="card">
+            <div class="ico">🧱</div>
+            <h3>Tile &amp; grout</h3>
+            <p>Pressure cleaning plus grout sealing so it stays clean longer.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" class="wrap">
+        <h2>Packages</h2>
+        <p class="lead">Priced per visit, within the morning (8–12) or afternoon (12–5) slot. No hidden fees.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Basic</h3>
+            <p>Up to 3 carpet areas, pre-treatment included.</p>
+            <div class="price">$129 <small>/ visit</small></div>
+          </div>
+          <div class="card">
+            <h3>Whole home</h3>
+            <p>Up to 6 areas, stairs and hallway, with deodorizer.</p>
+            <div class="price">$249 <small>/ visit</small></div>
+          </div>
+          <div class="card">
+            <h3>Complete</h3>
+            <p>Carpet, upholstery and tile, plus stain protector.</p>
+            <div class="price">$429 <small>/ visit</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" class="wrap">
+        <h2>Frequently asked questions</h2>
+        <div class="faq">
+          <details open>
+            <summary>How far ahead should I book?</summary>
+            <p>We usually have same-week openings; Saturdays fill up first.</p>
+          </details>
+          <details>
+            <summary>How long does it take to dry?</summary>
+            <p>Four to six hours. You can walk on it in clean socks almost right away.</p>
+          </details>
+          <details>
+            <summary>Do I need to move the furniture?</summary>
+            <p>Not the heavy pieces. We move sofas and light tables at no cost.</p>
+          </details>
+        </div>
+      </section>
+
+      <section id="contact" class="wrap">
+        <div class="cta-band">
+          <h2>Ready to lock in your date?</h2>
+          <p>Ask the assistant about availability for your day and book the visit right in the chat.</p>
+          <a class="btn" href="#" onclick="document.querySelector('div[style*=&quot;2147483000&quot;]')?.shadowRoot?.querySelector('button')?.click(); return false;">
+            Open the chat 💬
+          </a>
+        </div>
+
+        <div class="note">
+          <strong>Página de prueba.</strong> Esta landing es ficticia; existe solo para
+          validar el widget embebido de Bulldog servido desde
+          <code>http://localhost:3000/widget.v1.js</code> (cambia a <code>https://bulldog-three.vercel.app</code> tras el deploy). Debe abrirse
+          desde un origen incluido en <code>ALLOWED_ORIGINS</code> (hoy:
+          <code>http://localhost:3000</code>, <code>http://localhost:8080</code>), no como <code>file://</code>, o el
+          <code>frame-ancestors</code> del CSP bloqueará el iframe del chat.
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap foot">
+        <span>© 2026 Bulldog Carpet Cleaning — test landing</span>
+        <span>(702) 555-0142 · hola@example.com</span>
+      </div>
+    </footer>
   </body>
 </html>

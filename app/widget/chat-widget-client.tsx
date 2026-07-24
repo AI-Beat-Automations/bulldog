@@ -92,14 +92,25 @@ export function ChatWidgetClient() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <header className="flex shrink-0 items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-semibold">Bulldog</span>
+      {/* Header — carbón cálido de la barra superior del sitio */}
+      <header className="bg-secondary text-secondary-foreground flex shrink-0 items-center gap-2.5 px-3 py-2.5">
+        <span
+          aria-hidden
+          className="bg-primary grid size-8 shrink-0 place-items-center rounded-full text-base"
+        >
+          🐶
+        </span>
+        <span className="flex min-w-0 flex-col leading-tight">
+          <span className="truncate text-sm font-semibold">Bulldog</span>
+          <span className="text-[11px] text-white/70">
+            Carpet Cleaning · Las Vegas
+          </span>
+        </span>
         <button
           type="button"
           onClick={closeWidget}
-          aria-label="Cerrar chat"
-          className="text-muted-foreground hover:text-foreground rounded px-2 text-base leading-none"
+          aria-label="Close chat"
+          className="ml-auto rounded-md px-2 py-1 text-base leading-none text-white/70 transition-colors hover:bg-white/10 hover:text-white"
         >
           ✕
         </button>
@@ -111,32 +122,51 @@ export function ChatWidgetClient() {
         className="flex flex-1 flex-col gap-2 overflow-y-auto p-3"
       >
         {messages.length === 0 ? (
-          <p className="text-muted-foreground m-auto text-center text-sm">
-            ¿En qué puedo ayudarte?
-          </p>
+          <div className="m-auto px-4 text-center">
+            <p className="text-foreground text-sm font-semibold">
+              Hi! 👋 We&apos;re Bulldog Carpet Cleaning
+            </p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Ask about availability, pricing, or book your visit.
+            </p>
+          </div>
         ) : (
           messages.map((message) => (
             <div
               key={message.id}
               className={
                 message.role === "user"
-                  ? "bg-primary text-primary-foreground max-w-[85%] self-end rounded-lg px-3 py-2 text-sm whitespace-pre-wrap"
-                  : "bg-muted text-foreground max-w-[85%] self-start rounded-lg px-3 py-2 text-sm whitespace-pre-wrap"
+                  ? "bg-primary text-primary-foreground max-w-[85%] self-end rounded-2xl rounded-br-sm px-3.5 py-2 text-sm whitespace-pre-wrap shadow-xs"
+                  : "bg-muted text-foreground border-border max-w-[85%] self-start rounded-2xl rounded-bl-sm border px-3.5 py-2 text-sm whitespace-pre-wrap"
               }
             >
               {messageText(message)}
             </div>
           ))
         )}
+        {status === "submitted" ? (
+          <div
+            className="bg-muted border-border flex max-w-[85%] items-center gap-1 self-start rounded-2xl rounded-bl-sm border px-3.5 py-3"
+            aria-label="Typing"
+          >
+            {[0, 150, 300].map((delay) => (
+              <span
+                key={delay}
+                className="bg-primary size-1.5 animate-bounce rounded-full"
+                style={{ animationDelay: `${delay}ms` }}
+              />
+            ))}
+          </div>
+        ) : null}
         {error ? (
           <p className="text-destructive self-start text-xs">
-            Ocurrió un error. Intenta de nuevo.
+            Something went wrong. Please try again.
           </p>
         ) : null}
       </div>
 
       {/* Composer */}
-      <div className="flex shrink-0 items-end gap-2 border-t p-2">
+      <div className="border-border flex shrink-0 items-end gap-2 border-t bg-white p-2">
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -146,7 +176,7 @@ export function ChatWidgetClient() {
               handleSend();
             }
           }}
-          placeholder="Escribe un mensaje…"
+          placeholder="Type a message…"
           rows={1}
           className="max-h-32 min-h-9 flex-1 resize-none"
         />
@@ -156,7 +186,7 @@ export function ChatWidgetClient() {
           onClick={handleSend}
           disabled={isStreaming || input.trim().length === 0}
         >
-          Enviar
+          Send
         </Button>
       </div>
     </div>
