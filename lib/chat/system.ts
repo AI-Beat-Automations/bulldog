@@ -19,9 +19,12 @@ function formatBusinessNow(): string {
 
 /**
  * Compone el `system` que recibe el modelo en cada request:
- *  1. HASTA ARRIBA, mecánica code-owned: fecha/hora actual + las tools de
- *     disponibilidad y de órdenes + sus reglas de uso.
+ *  1. HASTA ARRIBA, mecánica code-owned: idioma + fecha/hora actual + las tools
+ *     de disponibilidad y de órdenes + sus reglas de uso.
  *  2. DEBAJO, el System Prompt del Admin (Active Version) intacto.
+ *
+ * La regla de idioma va primero y es explícita porque, sin ella, el modelo tomaba
+ * el español de estas instrucciones como señal y abría en español.
  *
  * El modelo no puede saber qué día es "hoy", por eso la fecha/hora la inyecta el
  * servidor. Las reglas viven aquí (no en el prompt del Admin) para que un edit
@@ -29,6 +32,16 @@ function formatBusinessNow(): string {
  */
 export function buildSystemPrompt(activePrompt: string): string {
   return [
+    `IDIOMA (manda sobre cualquier otra instrucción, incluidas las de abajo):`,
+    `El negocio opera en inglés. Tu idioma por defecto es INGLÉS y SIEMPRE abres`,
+    `en inglés. Estas instrucciones están escritas en español por conveniencia`,
+    `interna: eso NO define el idioma de tus respuestas y no es una señal de que`,
+    `el visitante hable español.`,
+    `Cambia a español SOLO cuando el visitante te escriba en español; a partir de`,
+    `ahí síguele en español mientras él siga en español, y regresa al inglés en`,
+    `cuanto él vuelva a escribirte en inglés. Ante la duda (saludo ambiguo,`,
+    `"ok", un nombre suelto, emojis), quédate en inglés.`,
+    ``,
     `Fecha y hora actual del negocio: ${formatBusinessNow()} (${BUSINESS_TIMEZONE}, Las Vegas).`,
     ``,
     `Tienes la herramienta "${GET_AVAILABILITY_TOOL}" para consultar cupos de citas.`,
