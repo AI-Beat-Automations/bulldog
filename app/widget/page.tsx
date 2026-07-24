@@ -21,18 +21,18 @@ const brandTheme = {
   "--card-foreground": "#2E2529",
   "--popover": "#FFFFFF",
   "--popover-foreground": "#2E2529",
-  "--primary": "#EB3471", // rosa de marca (hero, wordmark)
+  "--primary": "#02A5F5", // azul del CTA "Book Now!" — burbujas del visitante
   "--primary-foreground": "#FFFFFF",
   "--secondary": "#4D3E44", // carbón cálido (barra superior, botón CONTACT)
   "--secondary-foreground": "#FFFFFF",
-  "--muted": "#FBF1F5", // rosa lavado para las burbujas del asistente
-  "--muted-foreground": "#6B575E",
+  "--muted": "#EFF8FE", // azul lavado para las burbujas del asistente
+  "--muted-foreground": "#55707F",
   "--accent": "#A7D1E6", // azul claro del título "CARPET"
   "--accent-foreground": "#4D3E44",
-  "--foreground": "#2E2529",
-  "--border": "#F0DFE6",
-  "--input": "#E7D8DE",
-  "--ring": "#EB3471",
+  "--foreground": "#22323B",
+  "--border": "#DCEDF9",
+  "--input": "#C9E4F7",
+  "--ring": "#02A5F5",
 } as CSSProperties;
 
 // Página pública (excluida de auth en proxy.ts). Renderiza solo el chat.

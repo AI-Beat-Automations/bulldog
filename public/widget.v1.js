@@ -1,8 +1,8 @@
 (function () {
   var script = document.currentScript;
   var base = new URL(script.src).origin;
-  // Paleta Bulldog: rosa de marca, carbón cálido de la barra superior.
-  var color = script.getAttribute("data-color") || "#EB3471";
+  // Paleta Bulldog: azul del CTA "Book Now!" del sitio.
+  var color = script.getAttribute("data-color") || "#02A5F5";
   var title = script.getAttribute("data-title") || "Chat";
 
   // Host + shadow root: aísla el CSS del sitio anfitrión.
@@ -22,7 +22,8 @@
     ".bd-btn:hover{transform:translateY(-2px) scale(1.04);filter:brightness(1.06);" +
     "box-shadow:0 14px 32px rgba(0,0,0,.22),0 6px 12px rgba(0,0,0,.14)}" +
     ".bd-btn:active{transform:scale(.96)}" +
-    ".bd-btn:focus-visible{outline:3px solid #A7D1E6;outline-offset:3px}" +
+    // Anillo de foco en rosa: sobre el botón azul, un azul claro no se vería.
+    ".bd-btn:focus-visible{outline:3px solid #EB3471;outline-offset:3px}" +
     ".bd-ico{position:absolute;width:28px;height:28px;" +
     "transition:opacity .18s ease,transform .22s ease}" +
     ".bd-btn[data-open='false'] .bd-close,.bd-btn[data-open='true'] .bd-chat" +
