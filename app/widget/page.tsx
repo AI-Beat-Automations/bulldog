@@ -6,7 +6,21 @@ import { ChatWidgetClient } from "./chat-widget-client";
 // admin, que sigue con los neutros zinc + ámbar de globals.css) sobreescribiendo
 // los tokens de shadcn en el contenedor: las utilidades bg-primary, bg-muted,
 // border, ring… resuelven contra estas variables dentro del iframe.
+// El themeInitScript del layout raíz corre también dentro del iframe y pone
+// .dark en <html> si el VISITANTE tiene el sistema en oscuro. Un widget
+// embebido en el sitio del cliente debe verse igual para todos, así que este
+// script lo deshace antes del primer paint (ambos son inline y síncronos, y
+// este va después → gana, sin parpadeo).
+const forceLightScript =
+  "document.documentElement.classList.remove('dark');" +
+  "document.documentElement.style.colorScheme='light';";
+
 const brandTheme = {
+  "--background": "#FFFFFF", // sin esto hereda el fondo oscuro del tema
+  "--card": "#FFFFFF",
+  "--card-foreground": "#2E2529",
+  "--popover": "#FFFFFF",
+  "--popover-foreground": "#2E2529",
   "--primary": "#EB3471", // rosa de marca (hero, wordmark)
   "--primary-foreground": "#FFFFFF",
   "--secondary": "#4D3E44", // carbón cálido (barra superior, botón CONTACT)
@@ -28,6 +42,7 @@ export default function WidgetPage() {
       style={brandTheme}
       className="bg-background flex h-screen flex-col"
     >
+      <script dangerouslySetInnerHTML={{ __html: forceLightScript }} />
       <ChatWidgetClient />
     </main>
   );

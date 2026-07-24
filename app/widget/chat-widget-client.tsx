@@ -166,7 +166,7 @@ export function ChatWidgetClient() {
       </div>
 
       {/* Composer */}
-      <div className="border-border flex shrink-0 items-end gap-2 border-t bg-white p-2">
+      <div className="border-border bg-background flex shrink-0 items-end gap-2 border-t p-2">
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
